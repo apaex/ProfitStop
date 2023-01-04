@@ -3,9 +3,9 @@
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ACCOUNT              = 'SPBFUTJRghl'  -- Код счета
 CLASS_CODE           = 'SPBFUT'         -- Код класса
-SEC_CODE             = 'VBH3'          -- Код бумаги
-STOP_SIZE            = 300              -- Размер стопа в минимальных шагах цены (если 0, ставится только профит)
-PROFIT_SIZE          = 2000              -- Размер профита в минимальных шагах цены (если 0, ставится только стоп)
+-- SEC_CODE             = 'VBH3'          -- Код бумаги
+-- STOP_SIZE            = 300              -- Размер стопа в минимальных шагах цены (если 0, ставится только профит)
+-- PROFIT_SIZE          = 2000              -- Размер профита в минимальных шагах цены (если 0, ставится только стоп)
 MOVE_STOP_BY_POS     = 0               -- Менять первоначальное положение стоп-заявки при изменении средней цены позиции добором (1 - да, 0 - нет)
 LIMIT_KIND           = 0               -- Тип лимита (акции), для демо счета должно быть 0, для реального 2
 BALANCE_TYPE         = 1               -- Тип отображения баланса в терминале Quik (1 - в лотах, 2 - с учетом количества в лоте)
@@ -32,24 +32,31 @@ WORK_TIME            = {               -- Промежутки времени, �
 RUN = true
 trans_id = os.time()
 
-PriceStep = 0
-
 WORK_TIME_sec = {}
 SDT_sec = 0
 LastDay = 0
 
-StopOrderNum = nil
-StopPos = 0
+Engine = {}
+engines = {}
 
-_STOP_SIZE = STOP_SIZE
-_PROFIT_SIZE = PROFIT_SIZE
-NeedSetToOldPricesLevels = false
-
-main = function()
-   if STOP_SIZE == 0 and PROFIT_SIZE == 0 then
-      message(SEC_CODE..' Вы не указали ни профит, ни стоп, бот "ПрофитСтоп" ОТКЛЮЧИЛСЯ !!!')
-      return
-   end
+main = function()	
+   local params = {
+      "GDH3",
+      "SiH3",
+      "EuU3",
+      "CRH3",
+      "MXH3",
+      "RIH3",
+      "NGF3",
+      "BRG3"
+   }
+   for i, v in ipairs(params) do
+      engines[v] = Engine:new(v)
+	end
+--   if self.STOP_SIZE == 0 and self.PROFIT_SIZE == 0 then
+--      message(self.SEC_CODE..' Вы не указали ни профит, ни стоп, бот "ПрофитСтоп" ОТКЛЮЧИЛСЯ !!!')
+--      return
+--   end
    
    -- Цикл по дням
    while RUN do
@@ -68,10 +75,7 @@ main = function()
       -- Ждет начала первого торгового периода
       while RUN and os.time(GetServerDateTime()) < WORK_TIME_sec[1].BEGIN do sleep(100) end
       if not RUN then return end
-      
-      -- Получает минимальный шаг цены инструмента
-      PriceStep = tonumber(getParamEx(CLASS_CODE, SEC_CODE, "SEC_PRICE_STEP").param_value)
-      
+            
       -- Цикл внутри дня
       local may_work = false
       while RUN do
@@ -83,7 +87,9 @@ main = function()
             end
          end
          if may_work then
-            Algo()
+            for key, v in pairs(engines) do
+               v:Algo()
+            end
          else
             -- Если день закончился
             if SDT_sec >= WORK_TIME_sec[#WORK_TIME_sec].END then
@@ -101,70 +107,91 @@ OnStop = function()
    RUN = false
 end
 
-Algo = function()
-   local totalnet = GetTotalnet()
+
+function Engine:new(SEC_CODE)
+   newObj = {}
+ 
+   newObj.SEC_CODE             = SEC_CODE         -- Код бумаги
+   newObj.STOP_SIZE            = 300              -- Размер стопа в минимальных шагах цены (если 0, ставится только профит)
+   newObj.PROFIT_SIZE          = 2000              -- Размер профита в минимальных шагах цены (если 0, ставится только стоп)
+
+   -- Получает минимальный шаг цены инструмента
+   newObj.PriceStep = tonumber(getParamEx(CLASS_CODE, SEC_CODE, "SEC_PRICE_STEP").param_value)
+
+   newObj.StopOrderNum = nil
+   newObj.StopPos = 0
+   newObj._STOP_SIZE = newObj.STOP_SIZE
+   newObj._PROFIT_SIZE = newObj.PROFIT_SIZE
+   newObj.NeedSetToOldPricesLevels = false
+
+   self.__index = self
+   return setmetatable(newObj, self)
+end
+
+function Engine:Algo()
+   local totalnet = self:GetTotalnet()
    -- Есть позиция
    if totalnet ~= 0 then
       -- Стоп не соответствует (размер позиции изменился)
-      if StopPos ~= -totalnet then
+      if self.StopPos ~= -totalnet then
          -- Есть стоп-заявка бота
-         if StopOrderNum ~= nil then
+         if self.StopOrderNum ~= nil then
             -- Если активна
-            if CheckStopOrderActive(StopOrderNum) then
+            if self:CheckStopOrderActive(self.StopOrderNum) then
                -- Снимает
-               Kill_SO(StopOrderNum)
+               self:Kill_SO(self.StopOrderNum)
                -- Запоминает, что нужно перевыставить стоп-заявку в те же цены
-               if MOVE_STOP_BY_POS == 0 and ((StopPos > 0 and totalnet < 0) or (StopPos < 0 and totalnet > 0)) then NeedSetToOldPricesLevels = true end
+               if MOVE_STOP_BY_POS == 0 and ((self.StopPos > 0 and totalnet < 0) or (self.StopPos < 0 and totalnet > 0)) then NeedSetToOldPricesLevels = true end
             end
          -- Нет стоп заявки бота
          else
             -- Ищет стоп-заявку пользователя
-            FindUserStopOrder()
+            self:FindUserStopOrder()
             -- Снимает все стоп-заявки по инструменту, если есть
-            KillAll_SO()
+            self:KillAll_SO()
          end
          -- Снова получает размер позиции на случай, если стоп-заявка успела исполниться до снятия
-         totalnet = GetTotalnet()
+         totalnet = self:GetTotalnet()
          -- Позиция осталась
          if totalnet ~= 0 then
             -- Получает цену текущей позиции
-            local pos_price = GetPosPrice()
+            local pos_price = self:GetPosPrice()
             -- Получает количество лотов без знака в заявке
             local qty = math.floor(math.abs(totalnet))
             -- Определяет направление стоп-заявки и запоминает изменение позиции стоп-заявкой
             local operation = 'S'
-            StopPos = -qty
+            self.StopPos = -qty
             if totalnet < 0 then
                operation = 'B'
-               StopPos = qty
+               self.StopPos = qty
             end
             -- Если нужно выставить стоп и профит
-            if STOP_SIZE ~= 0 and PROFIT_SIZE ~= 0 then
+            if self.STOP_SIZE ~= 0 and self.PROFIT_SIZE ~= 0 then
                -- Если нужно выставить в обычном режиме
                if not NeedSetToOldPricesLevels then
                   -- Выставляет "Тейк профит и Стоп лимит" заявку
-                  SetTP_SL(
+                  self:SetTP_SL(
                      operation,     -- Операция ('B', или 'S')
                      pos_price,     -- Цена позиции, на которую выставляется стоп-заявка
                      qty,           -- Количество лотов
-                     PROFIT_SIZE,   -- Размер профита в шагах цены
-                     STOP_SIZE      -- Размер стопа в шагах цены
+                     self.PROFIT_SIZE,   -- Размер профита в шагах цены
+                     self.STOP_SIZE      -- Размер стопа в шагах цены
                   )
                -- Нужно выставить в те же цены
                else
                   -- Получает цены из снятой стоп-заявки
-                  local profit_price, stop_price = GetStopOrderPrices(StopOrderNum)
+                  local profit_price, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
                   local profit_size = 0
                   local stop_size = 0
                   if totalnet > 0 then
-                     profit_size = math.floor(math_round((profit_price - pos_price)/PriceStep))
-                     stop_size = math.floor(math_round((pos_price - stop_price)/PriceStep))
+                     profit_size = math.floor(math_round((profit_price - pos_price)/self.PriceStep))
+                     stop_size = math.floor(math_round((pos_price - stop_price)/self.PriceStep))
                   else
-                     profit_size = math.floor(math_round((pos_price - profit_price)/PriceStep))
-                     stop_size = math.floor(math_round((stop_price - pos_price)/PriceStep))
+                     profit_size = math.floor(math_round((pos_price - profit_price)/self.PriceStep))
+                     stop_size = math.floor(math_round((stop_price - pos_price)/self.PriceStep))
                   end
                   -- Выставляет "Тейк профит и Стоп лимит" заявку
-                  SetTP_SL(
+                  self:SetTP_SL(
                      operation,     -- Операция ('B', или 'S')
                      pos_price,     -- Цена позиции, на которую выставляется стоп-заявка
                      qty,           -- Количество лотов
@@ -173,49 +200,49 @@ Algo = function()
                   )
                end
             -- Нужно выставить только стоп
-            elseif PROFIT_SIZE == 0 then
+            elseif self.PROFIT_SIZE == 0 then
                local stop_price = 0
                -- Если нужно выставить в обычном режиме
                if not NeedSetToOldPricesLevels then
                   if totalnet < 0 then
-                     stop_price = pos_price + STOP_SIZE*PriceStep
+                     stop_price = pos_price + self.STOP_SIZE*self.PriceStep
                   else
-                     stop_price = pos_price - STOP_SIZE*PriceStep
+                     stop_price = pos_price - self.STOP_SIZE*self.PriceStep
                   end
                -- Нужно выставить в те же цены
                else
                   -- Получает цены из снятой стоп-заявки
-                  _, stop_price = GetStopOrderPrices(StopOrderNum)
+                  _, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
                end
                -- Выставляет стоп-заявку
-               Set_SL(
+               self:Set_SL(
                   operation,
                   stop_price,
                   qty
                )
             -- Нужно выставить только профит
-            elseif STOP_SIZE == 0 then
+            elseif self.STOP_SIZE == 0 then
                -- Если нужно выставить в обычном режиме
                if not NeedSetToOldPricesLevels then
                   -- Выставляет "Тейк профит" заявку
-                  SetTP(
+                  self:SetTP(
                      operation,     -- Операция ('B', или 'S')
                      pos_price,     -- Цена позиции, на которую выставляется стоп-заявка
                      qty,           -- Количество лотов
-                     PROFIT_SIZE    -- Размер профита в шагах цены
+                     self.PROFIT_SIZE    -- Размер профита в шагах цены
                   )
                -- Нужно выставить в те же цены
                else
                   -- Получает цены из снятой стоп-заявки
-                  local profit_price, _ = GetStopOrderPrices(StopOrderNum)
+                  local profit_price, _ = self:GetStopOrderPrices(self.StopOrderNum)
                   local profit_size = 0
                   if totalnet > 0 then
-                     profit_size = math.floor(math_round((profit_price - pos_price)/PriceStep))
+                     profit_size = math.floor(math_round((profit_price - pos_price)/self.PriceStep))
                   else
-                     profit_size = math.floor(math_round((pos_price - profit_price)/PriceStep))
+                     profit_size = math.floor(math_round((pos_price - profit_price)/self.PriceStep))
                   end
                   -- Выставляет "Тейк профит" заявку
-                  SetTP(
+                  self:SetTP(
                      operation,     -- Операция ('B', или 'S')
                      pos_price,     -- Цена позиции, на которую выставляется стоп-заявка
                      qty,           -- Количество лотов
@@ -228,41 +255,41 @@ Algo = function()
             if not RUN then return end
             
             -- Запоминает номер стоп-заявки
-            StopOrderNum = GetStopOrderNum(trans_id)
+            self.StopOrderNum = self:GetStopOrderNum(trans_id)
          end
       -- Стоп соответствует
       else
          -- Стоп-заявка снята (пользователь изменил стоп-заявку)
-         if CheckStopOrderKilled(StopOrderNum) then
+         if self:CheckStopOrderKilled(self.StopOrderNum) then
             -- Ищет измененную стоп-заявку
-            local newStopOrderNum = GetActiveStopOrderNumByComment('AS') 
-            if newStopOrderNum ~= nil then StopOrderNum = newStopOrderNum end
+            local newStopOrderNum = self:GetActiveStopOrderNumByComment('AS') 
+            if newStopOrderNum ~= nil then self.StopOrderNum = newStopOrderNum end
          -- Стоп-заявка исполнилась
-         elseif CheckStopOrderCompleted(StopOrderNum) then
+         elseif self:CheckStopOrderCompleted(self.StopOrderNum) then
             -- Ничего не делает
          end
       end
    -- Нет позиции
    else      
       -- Есть стоп-заявка бота
-      if StopOrderNum ~= nil then
+      if self.StopOrderNum ~= nil then
          -- Если активна
-         if CheckStopOrderActive(StopOrderNum) then
+         if self:CheckStopOrderActive(self.StopOrderNum) then
             -- Снимает
-            Kill_SO(StopOrderNum)
+            self:Kill_SO(self.StopOrderNum)
          end
-         StopOrderNum = nil
-         StopPos = 0
+         self.StopOrderNum = nil
+         self.StopPos = 0
       end
       -- Возвращает установленные изначально значения 
-      STOP_SIZE = _STOP_SIZE
-      PROFIT_SIZE = _PROFIT_SIZE
+      self.STOP_SIZE = self._STOP_SIZE
+      self.PROFIT_SIZE = self._PROFIT_SIZE
       NeedSetToOldPricesLevels = false
    end
 end
 
 -- Получает цену текущей позиции
-GetPosPrice = function()
+function Engine:GetPosPrice()
    -- Акции
    if CLASS_CODE == 'TQBR' or CLASS_CODE == 'QJSIM' then
       -- Перебирает таблицу "Позиции по инструментам"
@@ -270,7 +297,7 @@ GetPosPrice = function()
       local depo_limit = nil
       for i=0,num-1 do
          depo_limit = getItem('depo_limits', i)
-         if depo_limit.sec_code == SEC_CODE
+         if depo_limit.sec_code == self.SEC_CODE
          and depo_limit.trdaccid == ACCOUNT
          and depo_limit.limit_kind == LIMIT_KIND then 
             return depo_limit.awg_position_price
@@ -278,7 +305,7 @@ GetPosPrice = function()
       end
    -- Фьючерсы, опционы
    elseif CLASS_CODE == 'SPBFUT' or CLASS_CODE == 'SPBOPT' then
-      local totalnet = GetTotalnet()
+      local totalnet = self:GetTotalnet()
       -- Если позиция есть
       if totalnet ~= 0 then
          local abs_totalnet = math.abs(totalnet)
@@ -289,7 +316,7 @@ GetPosPrice = function()
          local num = getNumberOf('trades')
          for i=num-1,0,-1 do
             trade = getItem('trades', i)
-            if trade.sec_code == SEC_CODE then
+            if trade.sec_code == self.SEC_CODE then
                if (totalnet < 0 and bit.test(trade.flags, 2)) or (totalnet > 0 and not bit.test(trade.flags, 2)) or totalnet == 0 then
                   sum = sum + trade.price*trade.qty
                   sum_lots = sum_lots + trade.qty
@@ -313,18 +340,18 @@ GetPosPrice = function()
             local num = getNumberOf('futures_client_holding')
             if num > 0 then
                -- Находит размер лота
-               local lot = tonumber(getParamEx(CLASS_CODE, SEC_CODE, 'LOTSIZE').param_value)
+               local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
                local futures_client_holding = nil
                if num > 1 then
                   for i = 0, num - 1 do
                      futures_client_holding = getItem('futures_client_holding', i)
-                     if futures_client_holding.sec_code == SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
+                     if futures_client_holding.sec_code == self.SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
                         return futures_client_holding.avrposnprice
                      end
                   end
                else
                   futures_client_holding = getItem('futures_client_holding', 0)
-                  if futures_client_holding.sec_code == SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
+                  if futures_client_holding.sec_code == self.SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
                      return futures_client_holding.avrposnprice
                   end
                end
@@ -334,21 +361,21 @@ GetPosPrice = function()
    end
    
    -- Если не удалось получить значение, возвращает цену последней сделки по инструменту
-   return tonumber(getParamEx(CLASS_CODE, SEC_CODE, 'LAST').param_value)
+   return tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LAST').param_value)
 end
 
 -- Получает текущую чистую позицию по инструменту
-GetTotalnet = function()
+function Engine:GetTotalnet()
    -- ФЬЮЧЕРСЫ, ОПЦИОНЫ
    if CLASS_CODE == 'SPBFUT' or CLASS_CODE == 'SPBOPT' then
       local num = getNumberOf('futures_client_holding')
       if num > 0 then
          -- Находит размер лота
-         local lot = tonumber(getParamEx(CLASS_CODE, SEC_CODE, 'LOTSIZE').param_value)
+         local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
          if num > 1 then
             for i = 0, num - 1 do
                local futures_client_holding = getItem('futures_client_holding',i)
-               if futures_client_holding.sec_code == SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
+               if futures_client_holding.sec_code == self.SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
                   if BALANCE_TYPE == 1 then
                      return futures_client_holding.totalnet
                   else
@@ -358,7 +385,7 @@ GetTotalnet = function()
             end
          else
             local futures_client_holding = getItem('futures_client_holding',0)
-            if futures_client_holding.sec_code == SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
+            if futures_client_holding.sec_code == self.SEC_CODE and futures_client_holding.trdaccid == ACCOUNT then
                if BALANCE_TYPE == 1 then
                   return futures_client_holding.totalnet
                else
@@ -371,11 +398,11 @@ GetTotalnet = function()
    elseif CLASS_CODE == 'TQBR' or CLASS_CODE == 'QJSIM' then
       local num = getNumberOf('depo_limits')
       if num > 0 then
-         local lot = tonumber(getParamEx(CLASS_CODE, SEC_CODE, 'LOTSIZE').param_value)
+         local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
          if num > 1 then
             for i = 0, num - 1 do
                local depo_limit = getItem('depo_limits', i)
-               if depo_limit.sec_code == SEC_CODE
+               if depo_limit.sec_code == self.SEC_CODE
                and depo_limit.trdaccid == ACCOUNT
                and depo_limit.limit_kind == LIMIT_KIND then 
                   if BALANCE_TYPE == 1 then
@@ -387,7 +414,7 @@ GetTotalnet = function()
             end
          else
             local depo_limit = getItem('depo_limits', 0)
-            if depo_limit.sec_code == SEC_CODE
+            if depo_limit.sec_code == self.SEC_CODE
             and depo_limit.trdaccid == ACCOUNT
             and depo_limit.limit_kind == LIMIT_KIND then 
                if BALANCE_TYPE == 1 then
@@ -403,8 +430,8 @@ GetTotalnet = function()
       local num = getNumberOf('money_limits')
       if num > 0 then
          -- Находит валюту
-         local cur = string.sub(SEC_CODE, 1, 3)
-         local lot = tonumber(getParamEx(CLASS_CODE, SEC_CODE, 'LOTSIZE').param_value)
+         local cur = string.sub(self.SEC_CODE, 1, 3)
+         local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
          if num > 1 then
             for i = 0, num - 1 do
                local money_limit = getItem('money_limits', i)
@@ -438,53 +465,53 @@ GetTotalnet = function()
 end
 
 -- Ищет стоп-заявку пользователя
-FindUserStopOrder = function()
+function Engine:FindUserStopOrder()
    -- Перебирает таблицу стоп-заявок от последней к первой
    for i=getNumberOf('stop_orders') - 1, 0, -1 do
       -- Получает стоп-заявку из строки таблицы с индексом i
       local stop_order = getItem('stop_orders', i)
       -- Если заявка активна
-      if stop_order.sec_code == SEC_CODE and bit.test(stop_order.flags, 0) then
+      if stop_order.sec_code == self.SEC_CODE and bit.test(stop_order.flags, 0) then
          -- Получает параметры стоп-заявки
-         StopOrderNum = stop_order.order_num
-         local totalnet = GetTotalnet()
+         self.StopOrderNum = stop_order.order_num
+         local totalnet = self:GetTotalnet()
          -- ЛОНГ
          if totalnet > 0 then
             -- Тейк-профит
             if stop_order.stop_order_type == 6 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (stop_order.condition_price - GetPosPrice())/PriceStep 
-               STOP_SIZE = 0
+               self.PROFIT_SIZE = (stop_order.condition_price - self:GetPosPrice())/self.PriceStep 
+               self.STOP_SIZE = 0
             -- тейк-профит и стоп-лимит 
             elseif stop_order.stop_order_type == 9 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (stop_order.condition_price - GetPosPrice())/PriceStep
+               self.PROFIT_SIZE = (stop_order.condition_price - self:GetPosPrice())/self.PriceStep
                -- Вычисляет размер стопа
-               STOP_SIZE = (GetPosPrice() - stop_order.condition_price2)/PriceStep
+               self.STOP_SIZE = (self:GetPosPrice() - stop_order.condition_price2)/self.PriceStep
             -- стоп-лимит 
             elseif stop_order.stop_order_type == 1 then
-               PROFIT_SIZE = 0
+               self.PROFIT_SIZE = 0
                -- Вычисляет размер стопа
-               STOP_SIZE = (GetPosPrice() - stop_order.condition_price)/PriceStep
+               self.STOP_SIZE = (self:GetPosPrice() - stop_order.condition_price)/self.PriceStep
             end
          -- ШОРТ
          else
             -- Тейк-профит
             if stop_order.stop_order_type == 6 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (GetPosPrice() - stop_order.condition_price)/PriceStep 
-               STOP_SIZE = 0
+               self.PROFIT_SIZE = (self:GetPosPrice() - stop_order.condition_price)/self.PriceStep 
+               self.STOP_SIZE = 0
             -- тейк-профит и стоп-лимит 
             elseif stop_order.stop_order_type == 9 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (GetPosPrice() - stop_order.condition_price)/PriceStep
+               self.PROFIT_SIZE = (self:GetPosPrice() - stop_order.condition_price)/self.PriceStep
                -- Вычисляет размер стопа
-               STOP_SIZE = (stop_order.condition_price2 - GetPosPrice())/PriceStep
+               self.STOP_SIZE = (stop_order.condition_price2 - self:GetPosPrice())/self.PriceStep
             -- стоп-лимит 
             elseif stop_order.stop_order_type == 1 then
-               PROFIT_SIZE = 0
+               self.PROFIT_SIZE = 0
                -- Вычисляет размер стопа
-               STOP_SIZE = (stop_order.condition_price - GetPosPrice())/PriceStep
+               self.STOP_SIZE = (stop_order.condition_price - self:GetPosPrice())/self.PriceStep
             end
          end
          break
@@ -493,7 +520,7 @@ FindUserStopOrder = function()
 end
 
 -- Получает цены из стоп-заявки (profit_price, stop_price)
-GetStopOrderPrices = function(order_num)
+function Engine:GetStopOrderPrices(order_num)
    -- Перебирает таблицу стоп-заявок от последней к первой
    for i=getNumberOf('stop_orders') - 1, 0, -1 do
       -- Получает стоп-заявку из строки таблицы с индексом i
@@ -515,7 +542,7 @@ GetStopOrderPrices = function(order_num)
 end
 
 -- Выставляет стоп-лимит заявку
-Set_SL = function(
+function Engine:Set_SL(
    operation,     -- Операция ('B' - buy, 'S' - sell)
    stop_price,    -- Цена Стоп-Лосса
    qty            -- Количество в лотах
@@ -523,19 +550,19 @@ Set_SL = function(
    -- Получает ID для следующей транзакции
    trans_id = trans_id + 1
    -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
-   local price = stop_price - 50*PriceStep
-   if operation == 'B' then price = stop_price + 50*PriceStep end
+   local price = stop_price - 50*self.PriceStep
+   if operation == 'B' then price = stop_price + 50*self.PriceStep end
    -- Заполняет структуру для отправки транзакции на Стоп-лосс
    local T = {}
    T['TRANS_ID']           = tostring(trans_id)
    T['CLASSCODE']          = CLASS_CODE
-   T['SECCODE']            = SEC_CODE
+   T['SECCODE']            = self.SEC_CODE
    T['ACCOUNT']            = ACCOUNT
    T['ACTION']             = 'NEW_STOP_ORDER'               -- Тип заявки      
    T['OPERATION']          = operation                      -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
    T['QUANTITY']           = tostring(qty)                  -- Количество в лотах
-   T['STOPPRICE']          = GetCorrectPrice(stop_price)    -- Цена Стоп-Лосса
-   T['PRICE']              = GetCorrectPrice(price)         -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
+   T['STOPPRICE']          = self:GetCorrectPrice(stop_price)    -- Цена Стоп-Лосса
+   T['PRICE']              = self:GetCorrectPrice(price)         -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
    T['EXPIRY_DATE']        = EXPIRY_DATE                    -- 'TODAY', 'GTC', или время
    T['CLIENT_CODE']        = 'AS'                           -- Комментарий
  
@@ -544,13 +571,13 @@ Set_SL = function(
    -- Если при отправке транзакции возникла ошибка
    if Res ~= '' then
       -- Выводит ошибку
-      message(SEC_CODE..' Ошибка транзакции стоп-лимит: '..Res)
-      message(SEC_CODE..' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
+      message(self.SEC_CODE..' Ошибка транзакции стоп-лимит: '..Res)
+      message(self.SEC_CODE..' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
       OnStop()
    end
 end
 -- Выставляет "Тейк профит" заявку
-SetTP = function(
+function Engine:SetTP(
    operation,     -- Операция ('B', или 'S')
    pos_price,     -- Цена позиции, на которую выставляется стоп-заявка
    qty,           -- Количество лотов
@@ -559,16 +586,16 @@ SetTP = function(
    -- Получает ID для следующей транзакции
    trans_id = trans_id + 1
    -- Получает минимальный шаг цены
-   local PriceStep = tonumber(getParamEx(CLASS_CODE, SEC_CODE, "SEC_PRICE_STEP").param_value)
+   -- local self.PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
    -- Получает максимально возможную цену заявки
-   local PriceMax = tonumber(getParamEx(CLASS_CODE,  SEC_CODE, 'PRICEMAX').param_value)
+   local PriceMax = tonumber(getParamEx(CLASS_CODE,  self.SEC_CODE, 'PRICEMAX').param_value)
    -- Получает минимально возможную цену заявки
-   local PriceMin = tonumber(getParamEx(CLASS_CODE,  SEC_CODE, 'PRICEMIN').param_value)
+   local PriceMin = tonumber(getParamEx(CLASS_CODE,  self.SEC_CODE, 'PRICEMIN').param_value)
    -- Заполняет структуру для отправки транзакции на Стоп-лосс и Тэйк-профит
    local T = {}
    T['TRANS_ID']              = tostring(trans_id)
    T['CLASSCODE']             = CLASS_CODE
-   T['SECCODE']               = SEC_CODE
+   T['SECCODE']               = self.SEC_CODE
    T['ACCOUNT']               = ACCOUNT
    T['ACTION']                = 'NEW_STOP_ORDER'                                    -- Тип заявки      
    T['STOP_ORDER_KIND']       = 'TAKE_PROFIT_STOP_ORDER'                            -- Тип стоп-заявки
@@ -578,30 +605,30 @@ SetTP = function(
    -- Вычисляет цену профита
    local stopprice = 0
    if operation == 'B' then
-      stopprice = pos_price - profit_size*PriceStep
+      stopprice = pos_price - profit_size*self.PriceStep
       if PriceMin ~= nil and PriceMin ~= 0 and stopprice < PriceMin then
          stopprice = PriceMin
       end
    elseif operation == 'S' then
-      stopprice = pos_price + profit_size*PriceStep
+      stopprice = pos_price + profit_size*self.PriceStep
       if PriceMax ~= nil and PriceMax ~= 0 and stopprice > PriceMax then
          stopprice = PriceMax
       end
    end
-   T['STOPPRICE']             = GetCorrectPrice(stopprice)                          -- Цена Тэйк-Профита
+   T['STOPPRICE']             = self:GetCorrectPrice(stopprice)                          -- Цена Тэйк-Профита
    T['OFFSET']                = '0'                                                 -- отступ
    T['OFFSET_UNITS']          = 'PRICE_UNITS'                                       -- в шагах цены
-   local spread = 50*PriceStep
+   local spread = 50*self.PriceStep
    if operation == 'B' then
       if PriceMax ~= nil and PriceMax ~= 0 and stopprice + spread > PriceMax then
-         spread = PriceMax - stopprice - 1*PriceStep
+         spread = PriceMax - stopprice - 1*self.PriceStep
       end
    elseif operation == 'S' then
       if PriceMin ~= nil and PriceMin ~= 0 and stopprice - spread < PriceMin then
-         spread = stopprice - PriceMin - 1*PriceStep
+         spread = stopprice - PriceMin - 1*self.PriceStep
       end
    end
-   T['SPREAD']                = GetCorrectPrice(spread)                             -- Защитный спред
+   T['SPREAD']                = self:GetCorrectPrice(spread)                             -- Защитный спред
    T['SPREAD_UNITS']          = 'PRICE_UNITS'                                       -- в шагах цены
  
    T['EXPIRY_DATE']           = EXPIRY_DATE                                         -- 'TODAY', 'GTC', или время
@@ -610,13 +637,13 @@ SetTP = function(
    -- Отправляет транзакцию
    local Res = sendTransaction(T)
    if Res ~= '' then
-      message(SEC_CODE..' Ошибка выставления стоп-заявки: '..Res)
-      message(SEC_CODE..' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
+      message(self.SEC_CODE..' Ошибка выставления стоп-заявки: '..Res)
+      message(self.SEC_CODE..' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
       OnStop()
    end
 end
 -- Выставляет "Тейк профит и Стоп лимит" заявку
-SetTP_SL = function(
+function Engine:SetTP_SL(
    operation,     -- Операция ('B', или 'S')
    pos_price,     -- Цена позиции, на которую выставляется стоп-заявка
    qty,           -- Количество лотов
@@ -624,16 +651,16 @@ SetTP_SL = function(
    stop_size      -- Размер стопа в шагах цены
 )
    -- Получает минимальный шаг цены
-   local PriceStep = tonumber(getParamEx(CLASS_CODE, SEC_CODE, "SEC_PRICE_STEP").param_value)
+   -- local self.PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
    -- Получает максимально возможную цену заявки
-   local PriceMax = tonumber(getParamEx(CLASS_CODE,  SEC_CODE, 'PRICEMAX').param_value)
+   local PriceMax = tonumber(getParamEx(CLASS_CODE,  self.SEC_CODE, 'PRICEMAX').param_value)
    -- Получает минимально возможную цену заявки
-   local PriceMin = tonumber(getParamEx(CLASS_CODE,  SEC_CODE, 'PRICEMIN').param_value)
+   local PriceMin = tonumber(getParamEx(CLASS_CODE,  self.SEC_CODE, 'PRICEMIN').param_value)
    -- Заполняет структуру для отправки транзакции на Стоп-лосс и Тэйк-профит
    local T = {}
    T['TRANS_ID']              = tostring(trans_id)
    T['CLASSCODE']             = CLASS_CODE
-   T['SECCODE']               = SEC_CODE
+   T['SECCODE']               = self.SEC_CODE
    T['ACCOUNT']               = ACCOUNT
    T['ACTION']                = 'NEW_STOP_ORDER'                                    -- Тип заявки      
    T['STOP_ORDER_KIND']       = 'TAKE_PROFIT_AND_STOP_LIMIT_ORDER'                  -- Тип стоп-заявки
@@ -644,61 +671,61 @@ SetTP_SL = function(
    -- Вычисляет цену профита
    local stopprice = 0
    if operation == 'B' then
-      stopprice = pos_price - profit_size*PriceStep
+      stopprice = pos_price - profit_size*self.PriceStep
       if PriceMin ~= nil and PriceMin ~= 0 and stopprice < PriceMin then
          stopprice = PriceMin
       end
    elseif operation == 'S' then
-      stopprice = pos_price + profit_size*PriceStep
+      stopprice = pos_price + profit_size*self.PriceStep
       if PriceMax ~= nil and PriceMax ~= 0 and stopprice > PriceMax then
          stopprice = PriceMax
       end
    end
-   T['STOPPRICE']             = GetCorrectPrice(stopprice)                          -- Цена Тэйк-Профита
+   T['STOPPRICE']             = self:GetCorrectPrice(stopprice)                          -- Цена Тэйк-Профита
    T['OFFSET']                = '0'                                                 -- отступ
    T['OFFSET_UNITS']          = 'PRICE_UNITS'                                       -- в шагах цены
-   local spread = 50*PriceStep
+   local spread = 50*self.PriceStep
    if operation == 'B' then
       if PriceMax ~= nil and PriceMax ~= 0 and stopprice + spread > PriceMax then
-         spread = PriceMax - stopprice - 1*PriceStep
+         spread = PriceMax - stopprice - 1*self.PriceStep
       end
    elseif operation == 'S' then
       if PriceMin ~= nil and PriceMin ~= 0 and stopprice - spread < PriceMin then
-         spread = stopprice - PriceMin - 1*PriceStep
+         spread = stopprice - PriceMin - 1*self.PriceStep
       end
    end
-   T['SPREAD']                = GetCorrectPrice(spread)                             -- Защитный спред
+   T['SPREAD']                = self:GetCorrectPrice(spread)                             -- Защитный спред
    T['SPREAD_UNITS']          = 'PRICE_UNITS'                                       -- в шагах цены
    T['MARKET_TAKE_PROFIT']    = 'YES'                                                -- 'YES', или 'NO'
  
    -- Вычисляет цену стопа
    local stopprice2 = 0
    if operation == 'B' then
-      stopprice2 = pos_price + stop_size*PriceStep
+      stopprice2 = pos_price + stop_size*self.PriceStep
       if PriceMax ~= nil and PriceMax ~= 0 and stopprice2 > PriceMax then
          stopprice2 = PriceMax
       end
    elseif operation == 'S' then
-      stopprice2 = pos_price - stop_size*PriceStep
+      stopprice2 = pos_price - stop_size*self.PriceStep
       if PriceMin ~= nil and PriceMin ~= 0 and stopprice2 < PriceMin then
          stopprice2 = PriceMin
       end
    end
-   T['STOPPRICE2']            = GetCorrectPrice(stopprice2)                         -- Цена Стоп-Лосса
+   T['STOPPRICE2']            = self:GetCorrectPrice(stopprice2)                         -- Цена Стоп-Лосса
    -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
    local price = 0
    if operation == 'B' then
-      price = stopprice2 + 50*PriceStep
+      price = stopprice2 + 50*self.PriceStep
       if PriceMax ~= nil and PriceMax ~= 0 and price > PriceMax then
          price = PriceMax
       end
    elseif operation == 'S' then
-      price = stopprice2 - 50*PriceStep
+      price = stopprice2 - 50*self.PriceStep
       if PriceMin ~= nil and PriceMin ~= 0 and price < PriceMin then
          price = PriceMin
       end
    end
-   T['PRICE']                 = GetCorrectPrice(price)                              -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
+   T['PRICE']                 = self:GetCorrectPrice(price)                              -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
    T['MARKET_STOP_LIMIT']     = 'YES'                                                -- 'YES', или 'NO'
    T['EXPIRY_DATE']           = EXPIRY_DATE                                         -- 'TODAY', 'GTC', или время
    T['IS_ACTIVE_IN_TIME']     = 'NO'                                                -- Признак действия заявки типа «Тэйк-профит и стоп-лимит» в течение определенного интервала времени. Значения «YES» или «NO»
@@ -707,14 +734,14 @@ SetTP_SL = function(
    -- Отправляет транзакцию
    local Res = sendTransaction(T)
    if Res ~= '' then
-      message(SEC_CODE..' Ошибка выставления стоп-заявки: '..Res)
-      message(SEC_CODE..' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
+      message(self.SEC_CODE..' Ошибка выставления стоп-заявки: '..Res)
+      message(self.SEC_CODE..' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
       OnStop()
    end
 end
 
 -- Возвращает номер активной стоп-заявки с соответствующим комментарием, либо nil
-GetActiveStopOrderNumByComment = function(comment)
+function Engine:GetActiveStopOrderNumByComment(comment)
    -- Перебирает таблицу стоп-заявок от последней к первой
    for i=getNumberOf('stop_orders') - 1, 0, -1 do
       -- Получает стоп-заявку из строки таблицы с индексом i
@@ -722,40 +749,40 @@ GetActiveStopOrderNumByComment = function(comment)
       -- Если заявка активна и комментарий совпадает
       if bit.test(stop_order.flags, 0) and stop_order.brokerref:find(comment) ~= nil then
          -- Получает параметры стоп-заявки
-         local totalnet = GetTotalnet()
+         local totalnet = self:GetTotalnet()
          -- ЛОНГ
          if totalnet > 0 then
             -- Тейк-профит
             if stop_order.stop_order_type == 6 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (stop_order.condition_price - GetPosPrice())/PriceStep 
+               self.PROFIT_SIZE = (stop_order.condition_price - self:GetPosPrice())/self.PriceStep 
             -- тейк-профит и стоп-лимит 
             elseif stop_order.stop_order_type == 9 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (stop_order.condition_price - GetPosPrice())/PriceStep
+               self.PROFIT_SIZE = (stop_order.condition_price - self:GetPosPrice())/self.PriceStep
                -- Вычисляет размер стопа
-               STOP_SIZE = (GetPosPrice() - stop_order.condition_price2)/PriceStep
+               self.STOP_SIZE = (self:GetPosPrice() - stop_order.condition_price2)/self.PriceStep
             -- стоп-лимит 
             elseif stop_order.stop_order_type == 1 then
                -- Вычисляет размер стопа
-               STOP_SIZE = (GetPosPrice() - stop_order.condition_price)/PriceStep
+               self.STOP_SIZE = (self:GetPosPrice() - stop_order.condition_price)/self.PriceStep
             end
          -- ШОРТ
          else
             -- Тейк-профит
             if stop_order.stop_order_type == 6 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (GetPosPrice() - stop_order.condition_price)/PriceStep 
+               self.PROFIT_SIZE = (self:GetPosPrice() - stop_order.condition_price)/self.PriceStep 
             -- тейк-профит и стоп-лимит 
             elseif stop_order.stop_order_type == 9 then
                -- Вычисляет размер профита
-               PROFIT_SIZE = (GetPosPrice() - stop_order.condition_price)/PriceStep
+               self.PROFIT_SIZE = (self:GetPosPrice() - stop_order.condition_price)/self.PriceStep
                -- Вычисляет размер стопа
-               STOP_SIZE = (stop_order.condition_price2 - GetPosPrice())/PriceStep
+               self.STOP_SIZE = (stop_order.condition_price2 - self:GetPosPrice())/self.PriceStep
             -- стоп-лимит 
             elseif stop_order.stop_order_type == 1 then
                -- Вычисляет размер стопа
-               STOP_SIZE = (stop_order.condition_price - GetPosPrice())/PriceStep
+               self.STOP_SIZE = (stop_order.condition_price - self:GetPosPrice())/self.PriceStep
             end
          end
          -- Возвращает номер стоп-заявки
@@ -766,7 +793,7 @@ GetActiveStopOrderNumByComment = function(comment)
    return nil
 end
 -- Возвращает номер стоп-заявки по ее ID транзакции
-GetStopOrderNum = function(id)
+function Engine:GetStopOrderNum(id)
    while RUN do
       -- Перебирает таблицу стоп-заявок от последней к первой
       for i=getNumberOf('stop_orders') - 1, 0, -1 do
@@ -782,7 +809,7 @@ GetStopOrderNum = function(id)
    end
 end
 -- Проверяет по номеру активна ли стоп-заявка 
-CheckStopOrderActive = function(order_num)
+function Engine:CheckStopOrderActive(order_num)
    -- Перебирает таблицу стоп-заявок от последней к первой
    for i=getNumberOf('stop_orders') - 1, 0, -1 do
       -- Получает стоп-заявку из строки таблицы с индексом i
@@ -799,7 +826,7 @@ CheckStopOrderActive = function(order_num)
    end
 end
 -- Проверяет по номеру снята ли стоп-заявка 
-CheckStopOrderKilled = function(order_num)
+function Engine:CheckStopOrderKilled(order_num)
    -- Перебирает таблицу стоп-заявок от последней к первой
    for i=getNumberOf('stop_orders') - 1, 0, -1 do
       -- Получает стоп-заявку из строки таблицы с индексом i
@@ -816,7 +843,7 @@ CheckStopOrderKilled = function(order_num)
    end
 end
 -- Проверяет по номеру исполнена ли стоп-заявка 
-CheckStopOrderCompleted = function(order_num)
+function Engine:CheckStopOrderCompleted(order_num)
    -- Перебирает таблицу стоп-заявок от последней к первой
    for i=getNumberOf('stop_orders') - 1, 0, -1 do
       -- Получает стоп-заявку из строки таблицы с индексом i
@@ -833,7 +860,7 @@ CheckStopOrderCompleted = function(order_num)
    end
 end
 -- Снимает стоп-заявку
-Kill_SO = function(
+function Engine:Kill_SO(
    stop_order_num    -- Номер снимаемой стоп-заявки
 )
    -- Находит стоп-заявку (30 сек. макс.)
@@ -855,7 +882,7 @@ Kill_SO = function(
       end
    end
    if not find_so then
-      message(SEC_CODE..' Ошибка: не найдена стоп-заявка!')
+      message(self.SEC_CODE..' Ошибка: не найдена стоп-заявка!')
       return false
    end
  
@@ -865,7 +892,7 @@ Kill_SO = function(
    local T = {}
    T['TRANS_ID']            = tostring(trans_id)
    T['CLASSCODE']           = CLASS_CODE
-   T['SECCODE']             = SEC_CODE
+   T['SECCODE']             = self.SEC_CODE
    T['ACTION']              = 'KILL_STOP_ORDER'        -- Тип заявки 
    T['STOP_ORDER_KEY']      = tostring(stop_order_num) -- Номер стоп-заявки, снимаемой из торговой системы
  
@@ -874,7 +901,7 @@ Kill_SO = function(
    -- Если при отправке транзакции возникла ошибка
    if Res ~= '' then
       -- Выводит ошибку
-      message(SEC_CODE..' Ошибка снятия стоп-заявки: '..Res)
+      message(self.SEC_CODE..' Ошибка снятия стоп-заявки: '..Res)
       return false
    end   
  
@@ -895,30 +922,30 @@ Kill_SO = function(
       sleep(10)
    end
    if active then
-      message(SEC_CODE..' Возникла неизвестная ошибка при снятии СТОП-ЗАЯВКИ')
+      message(self.SEC_CODE..' Возникла неизвестная ошибка при снятии СТОП-ЗАЯВКИ')
       return false
    end
  
    return true
 end
 -- Снимает все стоп-заявки по инструменту
-KillAll_SO = function()
+function Engine:KillAll_SO()
    for i=getNumberOf('stop_orders')-1,0,-1 do
       local stop_order = getItem('stop_orders', i)
       -- Найдена активная заявка по инструменту
-      if stop_order.sec_code == SEC_CODE and bit.test(stop_order.flags, 0) then
+      if stop_order.sec_code == self.SEC_CODE and bit.test(stop_order.flags, 0) then
          -- Снимает
-         Kill_SO(stop_order.order_num)
+         self:Kill_SO(stop_order.order_num)
       end
    end
 end
 
 -- Приводит переданную цену к требуемому для транзакции по инструменту виду
-GetCorrectPrice = function(price) -- STRING
+function Engine:GetCorrectPrice(price) -- STRING
    -- Получает точность цены по инструменту
-   local scale = getSecurityInfo(CLASS_CODE, SEC_CODE).scale
+   local scale = getSecurityInfo(CLASS_CODE, self.SEC_CODE).scale
    -- Получает минимальный шаг цены инструмента
-   local PriceStep = tonumber(getParamEx(CLASS_CODE, SEC_CODE, "SEC_PRICE_STEP").param_value)
+   -- local PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
    -- Если после запятой должны быть цифры
    if scale > 0 then
       price = tostring(price)
@@ -937,13 +964,13 @@ GetCorrectPrice = function(price) -- STRING
          -- Округляет число до необходимого количества знаков после запятой
          price = math_round(tonumber(price), scale)
          -- Корректирует на соответствие шагу цены
-         price = math_round(price/PriceStep)*PriceStep
+         price = math_round(price/self.PriceStep)*self.PriceStep
          price = string.gsub(tostring(price),'[%.]+', ',')
          return price
       end
    else -- После запятой не должно быть цифр
       -- Корректирует на соответствие шагу цены
-      price = math_round(price/PriceStep)*PriceStep
+      price = math_round(price/self.PriceStep)*self.PriceStep
       return tostring(math.floor(price))
    end
 end
