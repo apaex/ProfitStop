@@ -60,24 +60,20 @@ function Engine:Algo()
                     operation = 'B'
                     self.StopPos = qty
                 end
+                local profit_size = 0
+                local stop_size = 0
+
                 -- Если нужно выставить стоп и профит
                 if self.STOP_SIZE ~= 0 and self.PROFIT_SIZE ~= 0 then
                     -- Если нужно выставить в обычном режиме
                     if not NeedSetToOldPricesLevels then
-                        -- Выставляет "Тейк профит и Стоп лимит" заявку
-                        self:SetTP_SL(
-                            operation, -- Операция ('B', или 'S')
-                            pos_price, -- Цена позиции, на которую выставляется стоп-заявка
-                            qty, -- Количество лотов
-                            self.PROFIT_SIZE, -- Размер профита в шагах цены
-                            self.STOP_SIZE-- Размер стопа в шагах цены
-                        )
+                        profit_size = self.PROFIT_SIZE -- Размер профита в шагах цены
+                        stop_size = self.STOP_SIZE -- Размер стопа в шагах цены
                         -- Нужно выставить в те же цены
                     else
                         -- Получает цены из снятой стоп-заявки
                         local profit_price, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
-                        local profit_size = 0
-                        local stop_size = 0
+
                         if totalnet > 0 then
                             profit_size = math.floor(math_round((profit_price - pos_price) / self.PriceStep))
                             stop_size = math.floor(math_round((pos_price - stop_price) / self.PriceStep))
@@ -85,15 +81,17 @@ function Engine:Algo()
                             profit_size = math.floor(math_round((pos_price - profit_price) / self.PriceStep))
                             stop_size = math.floor(math_round((stop_price - pos_price) / self.PriceStep))
                         end
-                        -- Выставляет "Тейк профит и Стоп лимит" заявку
-                        self:SetTP_SL(
-                            operation, -- Операция ('B', или 'S')
-                            pos_price, -- Цена позиции, на которую выставляется стоп-заявка
-                            qty, -- Количество лотов
-                            profit_size, -- Размер профита в шагах цены
-                            stop_size-- Размер стопа в шагах цены
-                        )
                     end
+
+                    -- Выставляет "Тейк профит и Стоп лимит" заявку
+                    self:SetTP_SL(
+                        operation, -- Операция ('B', или 'S')
+                        pos_price, -- Цена позиции, на которую выставляется стоп-заявка
+                        qty, -- Количество лотов
+                        profit_size, -- Размер профита в шагах цены
+                        stop_size-- Размер стопа в шагах цены
+                    )
+
                     -- Нужно выставить только стоп
                 elseif self.PROFIT_SIZE == 0 then
                     local stop_price = 0
@@ -119,31 +117,26 @@ function Engine:Algo()
                 elseif self.STOP_SIZE == 0 then
                     -- Если нужно выставить в обычном режиме
                     if not NeedSetToOldPricesLevels then
-                        -- Выставляет "Тейк профит" заявку
-                        self:SetTP(
-                            operation, -- Операция ('B', или 'S')
-                            pos_price, -- Цена позиции, на которую выставляется стоп-заявка
-                            qty, -- Количество лотов
-                            self.PROFIT_SIZE-- Размер профита в шагах цены
-                        )
+                        profit_size = self.PROFIT_SIZE -- Размер профита в шагах цены
                         -- Нужно выставить в те же цены
                     else
                         -- Получает цены из снятой стоп-заявки
                         local profit_price, _ = self:GetStopOrderPrices(self.StopOrderNum)
-                        local profit_size = 0
+
                         if totalnet > 0 then
                             profit_size = math.floor(math_round((profit_price - pos_price) / self.PriceStep))
                         else
                             profit_size = math.floor(math_round((pos_price - profit_price) / self.PriceStep))
                         end
-                        -- Выставляет "Тейк профит" заявку
-                        self:SetTP(
-                            operation, -- Операция ('B', или 'S')
-                            pos_price, -- Цена позиции, на которую выставляется стоп-заявка
-                            qty, -- Количество лотов
-                            profit_size-- Размер профита в шагах цены
-                        )
+
                     end
+                    -- Выставляет "Тейк профит" заявку
+                    self:SetTP(
+                        operation, -- Операция ('B', или 'S')
+                        pos_price, -- Цена позиции, на которую выставляется стоп-заявка
+                        qty, -- Количество лотов
+                        profit_size-- Размер профита в шагах цены
+                    )
                 end
 
                 -- Если робот аварийно завршил работу, выходит из функции
@@ -886,21 +879,23 @@ function Engine:GetCorrectPrice(price) -- STRING
 end
 
 -- Округляет число до указанной точности
-math_round = function(num, idp)
+function math_round(num, idp)
     local mult = 10 ^ (idp or 0)
     return math.floor(num * mult + 0.5) / mult
 end
 
-UpdateDataSecQty             = 10 -- Количество секунд ожидания подгрузки данных с сервера после возобновления подключения
+UpdateDataSecQty = 10 -- Количество секунд ожидания подгрузки данных с сервера после возобновления подключения
+
 -- Ждет подключения к серверу, после чего ждет еще UpdateDataSecQty секунд подгрузки пропущенных данных с сервера
-WaitUpdateDataAfterReconnect = function()
+function WaitUpdateDataAfterReconnect()
     while IsRun and isConnected() == 0 do sleep(100) end
     if IsRun then sleep(UpdateDataSecQty * 1000) end
     -- Повторяет операцию если соединение снова оказалось разорвано
     if IsRun and isConnected() == 0 then WaitUpdateDataAfterReconnect() end
 end
+
 -- Возвращает текущую дату/время сервера в виде таблицы datetime
-GetServerDateTime            = function()
+function GetServerDateTime()
     local dt = {}
 
     -- Пытается получить дату/время сервера
@@ -920,8 +915,9 @@ GetServerDateTime            = function()
     -- Возвращает итоговую таблицу
     return dt
 end
+
 -- Приводит время из строкового формата ЧЧ:ММ:СС к формату datetime
-StrToTime                    = function(str_time)
+function StrToTime(str_time)
     while IsRun and GetServerDateTime().day == nil do sleep(100) end
     if not IsRun then return os.date('*t', os.time()) end
     local dt = GetServerDateTime()
