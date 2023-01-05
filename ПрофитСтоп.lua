@@ -11,10 +11,8 @@ function main()
       if isConnected() then
          ForEach("futures_client_holding",
             function(t)
-               if t.class_code == CLASS_CODE then
-                  engines[t.sec_code] = engines[t.sec_code] or Engine:new(t.trdaccid, t.sec_code)
-                  engines[t.sec_code]:Algo()
-               end
+               engines[t.sec_code] = engines[t.sec_code] or Engine:new(t.trdaccid, t.sec_code)
+               engines[t.sec_code]:Algo()
             end
          )
       end
