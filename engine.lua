@@ -694,7 +694,7 @@ function Engine:new(trdaccid, sec_code)
           -- Получает стоп-заявку из строки таблицы с индексом i
           local stop_order = getItem('stop_orders', i)
           -- Если ID транзакции совпадает
-          if stop_order.Engine.trans_id == id then
+          if stop_order.trans_id == id then
              -- Возвращает номер стоп-заявки
              return stop_order.order_num
           end
