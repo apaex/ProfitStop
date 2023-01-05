@@ -544,6 +544,9 @@ function Engine:new(trdaccid, sec_code)
     profit_size,   -- Размер профита в шагах цены
     stop_size      -- Размер стопа в шагах цены
  )
+    -- Получает ID для следующей транзакции
+    Engine.trans_id = Engine.trans_id + 1
+    
     -- Получает минимальный шаг цены
     -- local self.PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
     -- Получает максимально возможную цену заявки
