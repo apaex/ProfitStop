@@ -4,9 +4,9 @@ dofile(getScriptPath() .. "\\engine.lua")
 setPrefix("PS")
 IsRun = true
 
-engines = {}
-
 function main()
+   local engines = {}
+
    while IsRun do
       if isConnected() then
          ForEach("futures_client_holding",
@@ -20,6 +20,6 @@ function main()
    end
 end
 
-OnStop = function()
+function OnStop()
    IsRun = false
 end
