@@ -110,7 +110,7 @@ function Engine:Algo()
                     -- Выставляет стоп-заявку
                     self:Set_SL(
                         operation,
-                        stop_price,         -- почему-то в пунктах, а не в шагах
+                        stop_price, -- почему-то в пунктах, а не в шагах
                         qty
                     )
                     -- Нужно выставить только профит
@@ -178,78 +178,64 @@ end
 
 -- Получает цену текущей позиции
 function Engine:GetPosPrice()
-    -- Акции
-    if CLASS_CODE == 'TQBR' or CLASS_CODE == 'QJSIM' then
-        -- Перебирает таблицу "Позиции по инструментам"
-        local num = getNumberOf('depo_limits')
-        local depo_limit = nil
-        for i = 0, num - 1 do
-            depo_limit = getItem('depo_limits', i)
-            if depo_limit.sec_code == self.SEC_CODE
-                and depo_limit.trdaccid == self.ACCOUNT
-                and depo_limit.limit_kind == LIMIT_KIND then
-                return depo_limit.awg_position_price
-            end
-        end
-        -- Фьючерсы, опционы
-    elseif CLASS_CODE == 'SPBFUT' or CLASS_CODE == 'SPBOPT' then
-        local totalnet = self:GetTotalnet()
-        -- Если позиция есть
-        if totalnet ~= 0 then
-            local abs_totalnet = math.abs(totalnet)
-            local sum = 0
-            local sum_lots = 0
-            local trade = nil
-            -- Перебирает сделки
-            local num = getNumberOf('trades')
-            for i = num - 1, 0, -1 do
-                trade = getItem('trades', i)
-                if trade.sec_code == self.SEC_CODE then
-                    if (totalnet < 0 and bit.test(trade.flags, 2)) or (totalnet > 0 and not bit.test(trade.flags, 2)) or
-                        totalnet == 0 then
-                        sum = sum + trade.price * trade.qty
-                        sum_lots = sum_lots + trade.qty
-                        -- Если найдены все сделки набора позиции
-                        if sum_lots >= abs_totalnet then
-                            -- Возвращает среднюю цену
-                            message('ddd ' .. totalnet)
-                            return sum / sum_lots
-                        end
+
+    local totalnet = self:GetTotalnet()
+    -- Если позиция есть
+    if totalnet ~= 0 then
+        local abs_totalnet = math.abs(totalnet)
+        local sum = 0
+        local sum_lots = 0
+        local trade = nil
+        -- Перебирает сделки
+        local num = getNumberOf('trades')
+        for i = num - 1, 0, -1 do
+            trade = getItem('trades', i)
+            if trade.sec_code == self.SEC_CODE then
+                if (totalnet < 0 and bit.test(trade.flags, 2)) or (totalnet > 0 and not bit.test(trade.flags, 2)) or
+                    totalnet == 0 then
+                    sum = sum + trade.price * trade.qty
+                    sum_lots = sum_lots + trade.qty
+                    -- Если найдены все сделки набора позиции
+                    if sum_lots >= abs_totalnet then
+                        -- Возвращает среднюю цену
+                        -- message('ddd ' .. totalnet)
+                        return sum / sum_lots
                     end
                 end
             end
-            -- Не удалось найти все сделки набора позиции
-            -- Если найдены хоть какие-то сделки набора
-            if sum_lots > 0 then
-                -- Возвращает среднюю цену найденных
-                return sum / sum_lots
-                -- Сделок набора не найдено
-            else
-                -- Возвращает эффективную цену позиции
-                local num = getNumberOf('futures_client_holding')
-                if num > 0 then
-                    -- Находит размер лота
-                    local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
-                    local futures_client_holding = nil
-                    if num > 1 then
-                        for i = 0, num - 1 do
-                            futures_client_holding = getItem('futures_client_holding', i)
-                            if futures_client_holding.sec_code == self.SEC_CODE and
-                                futures_client_holding.trdaccid == self.ACCOUNT then
-                                return futures_client_holding.avrposnprice
-                            end
-                        end
-                    else
-                        futures_client_holding = getItem('futures_client_holding', 0)
+        end
+        -- Не удалось найти все сделки набора позиции
+        -- Если найдены хоть какие-то сделки набора
+        if sum_lots > 0 then
+            -- Возвращает среднюю цену найденных
+            return sum / sum_lots
+            -- Сделок набора не найдено
+        else
+            -- Возвращает эффективную цену позиции
+            local num = getNumberOf('futures_client_holding')
+            if num > 0 then
+                -- Находит размер лота
+                local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
+                local futures_client_holding = nil
+                if num > 1 then
+                    for i = 0, num - 1 do
+                        futures_client_holding = getItem('futures_client_holding', i)
                         if futures_client_holding.sec_code == self.SEC_CODE and
                             futures_client_holding.trdaccid == self.ACCOUNT then
                             return futures_client_holding.avrposnprice
                         end
                     end
+                else
+                    futures_client_holding = getItem('futures_client_holding', 0)
+                    if futures_client_holding.sec_code == self.SEC_CODE and
+                        futures_client_holding.trdaccid == self.ACCOUNT then
+                        return futures_client_holding.avrposnprice
+                    end
                 end
             end
         end
     end
+
 
     -- Если не удалось получить значение, возвращает цену последней сделки по инструменту
     return tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LAST').param_value)
@@ -257,96 +243,20 @@ end
 
 -- Получает текущую чистую позицию по инструменту
 function Engine:GetTotalnet()
-    -- ФЬЮЧЕРСЫ, ОПЦИОНЫ
-    if CLASS_CODE == 'SPBFUT' or CLASS_CODE == 'SPBOPT' then
-        local num = getNumberOf('futures_client_holding')
-        if num > 0 then
-            -- Находит размер лота
-            local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
-            if num > 1 then
-                for i = 0, num - 1 do
-                    local futures_client_holding = getItem('futures_client_holding', i)
-                    if futures_client_holding.sec_code == self.SEC_CODE and
-                        futures_client_holding.trdaccid == self.ACCOUNT then
-                        if BALANCE_TYPE == 1 then
-                            return futures_client_holding.totalnet
-                        else
-                            return futures_client_holding.totalnet / lot
-                        end
-                    end
-                end
-            else
-                local futures_client_holding = getItem('futures_client_holding', 0)
-                if futures_client_holding.sec_code == self.SEC_CODE and futures_client_holding.trdaccid == self.ACCOUNT then
-                    if BALANCE_TYPE == 1 then
-                        return futures_client_holding.totalnet
-                    else
-                        return futures_client_holding.totalnet / lot
-                    end
-                end
-            end
-        end
-        -- АКЦИИ
-    elseif CLASS_CODE == 'TQBR' or CLASS_CODE == 'QJSIM' then
-        local num = getNumberOf('depo_limits')
-        if num > 0 then
-            local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
-            if num > 1 then
-                for i = 0, num - 1 do
-                    local depo_limit = getItem('depo_limits', i)
-                    if depo_limit.sec_code == self.SEC_CODE
-                        and depo_limit.trdaccid == self.ACCOUNT
-                        and depo_limit.limit_kind == LIMIT_KIND then
-                        if BALANCE_TYPE == 1 then
-                            return depo_limit.currentbal
-                        else
-                            return depo_limit.currentbal / lot
-                        end
-                    end
-                end
-            else
-                local depo_limit = getItem('depo_limits', 0)
-                if depo_limit.sec_code == self.SEC_CODE
-                    and depo_limit.trdaccid == self.ACCOUNT
-                    and depo_limit.limit_kind == LIMIT_KIND then
-                    if BALANCE_TYPE == 1 then
-                        return depo_limit.currentbal
-                    else
-                        return depo_limit.currentbal / lot
-                    end
-                end
-            end
-        end
-        -- ВАЛЮТА
-    elseif CLASS_CODE == 'CETS' then
-        local num = getNumberOf('money_limits')
-        if num > 0 then
-            -- Находит валюту
-            local cur = string.sub(self.SEC_CODE, 1, 3)
-            local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
-            if num > 1 then
-                for i = 0, num - 1 do
-                    local money_limit = getItem('money_limits', i)
-                    if money_limit.currcode == cur
-                        and money_limit.client_code == CLIENT_CODE
-                        and money_limit.limit_kind == LIMIT_KIND then
-                        if BALANCE_TYPE == 1 then
-                            return money_limit.currentbal
-                        else
-                            return money_limit.currentbal / lot
-                        end
-                    end
-                end
-            else
-                local money_limit = getItem('money_limits', 0)
-                if money_limit.currcode == cur
-                    and money_limit.client_code == CLIENT_CODE
-                    and money_limit.limit_kind == LIMIT_KIND then
-                    if BALANCE_TYPE == 1 then
-                        return money_limit.currentbal
-                    else
-                        return money_limit.currentbal / lot
-                    end
+
+    local num = getNumberOf('futures_client_holding')
+    if num > 0 then
+        -- Находит размер лота
+        local lot = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'LOTSIZE').param_value)
+
+        for i = 0, num - 1 do
+            local futures_client_holding = getItem('futures_client_holding', i)
+            if futures_client_holding.sec_code == self.SEC_CODE and
+                futures_client_holding.trdaccid == self.ACCOUNT then
+                if BALANCE_TYPE == 1 then
+                    return futures_client_holding.totalnet
+                else
+                    return futures_client_holding.totalnet / lot
                 end
             end
         end
