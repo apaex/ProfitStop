@@ -35,8 +35,9 @@ function Engine:Algo()
                     -- Снимает
                     self:Kill_SO(self.StopOrderNum)
                     -- Запоминает, что нужно перевыставить стоп-заявку в те же цены
-                    if MOVE_STOP_BY_POS == 0 and
-                        ((self.StopPos > 0 and totalnet < 0) or (self.StopPos < 0 and totalnet > 0)) then NeedSetToOldPricesLevels = true end
+                    if MOVE_STOP_BY_POS == 0 and ((self.StopPos > 0 and totalnet < 0) or (self.StopPos < 0 and totalnet > 0)) then
+                        NeedSetToOldPricesLevels = true
+                    end
                 end
                 -- Нет стоп заявки бота
             else
@@ -365,7 +366,7 @@ function Engine:Set_SL(
     T['QUANTITY']    = tostring(qty) -- Количество в лотах
     T['STOPPRICE']   = self:GetCorrectPrice(stop_price) -- Цена Стоп-Лосса
     T['PRICE']       = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
-    T['EXPIRY_DATE'] = EXPIRY_DATE -- 'TODAY', 'GTC', или время
+    T['EXPIRY_DATE'] = 'GTC' -- 'TODAY', 'GTC', или время
     T['CLIENT_CODE'] = 'AS' -- Комментарий
 
     -- Отправляет транзакцию
@@ -434,7 +435,7 @@ function Engine:SetTP(
     T['SPREAD']       = self:GetCorrectPrice(spread) -- Защитный спред
     T['SPREAD_UNITS'] = 'PRICE_UNITS' -- в шагах цены
 
-    T['EXPIRY_DATE'] = EXPIRY_DATE -- 'TODAY', 'GTC', или время
+    T['EXPIRY_DATE'] = 'GTC' -- 'TODAY', 'GTC', или время
     T['CLIENT_CODE'] = 'AS' -- Комментарий
 
     -- Отправляет транзакцию
@@ -534,7 +535,7 @@ function Engine:SetTP_SL(
     end
     T['PRICE']             = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
     T['MARKET_STOP_LIMIT'] = 'YES' -- 'YES', или 'NO'
-    T['EXPIRY_DATE']       = EXPIRY_DATE -- 'TODAY', 'GTC', или время
+    T['EXPIRY_DATE']       = 'GTC' -- 'TODAY', 'GTC', или время
     T['IS_ACTIVE_IN_TIME'] = 'NO' -- Признак действия заявки типа «Тэйк-профит и стоп-лимит» в течение определенного интервала времени. Значения «YES» или «NO»
     T['CLIENT_CODE']       = 'AS' -- Комментарий
 
