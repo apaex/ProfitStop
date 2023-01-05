@@ -1,6 +1,5 @@
 Engine = {}
-
-trans_id = os.time()
+Engine.trans_id = os.time()
 
 function Engine:new(trdaccid, sec_code)
     newObj = {}
@@ -150,7 +149,7 @@ function Engine:new(trdaccid, sec_code)
              if not IsRun then return end
              
              -- Запоминает номер стоп-заявки
-             self.StopOrderNum = self:GetStopOrderNum(trans_id)
+             self.StopOrderNum = self:GetStopOrderNum(Engine.trans_id)
           end
        -- Стоп соответствует
        else
@@ -443,16 +442,16 @@ function Engine:new(trdaccid, sec_code)
     qty            -- Количество в лотах
  )
     -- Получает ID для следующей транзакции
-    trans_id = trans_id + 1
+    Engine.trans_id = Engine.trans_id + 1
     -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
     local price = stop_price - 50*self.PriceStep
     if operation == 'B' then price = stop_price + 50*self.PriceStep end
     -- Заполняет структуру для отправки транзакции на Стоп-лосс
     local T = {}
-    T['TRANS_ID']           = tostring(trans_id)
+    T['TRANS_ID']           = tostring(Engine.trans_id)
     T['CLASSCODE']          = CLASS_CODE
     T['SECCODE']            = self.SEC_CODE
-    T['self.ACCOUNT']            = self.ACCOUNT
+    T['ACCOUNT']            = self.ACCOUNT
     T['ACTION']             = 'NEW_STOP_ORDER'               -- Тип заявки      
     T['OPERATION']          = operation                      -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
     T['QUANTITY']           = tostring(qty)                  -- Количество в лотах
@@ -479,7 +478,7 @@ function Engine:new(trdaccid, sec_code)
     profit_size    -- Размер профита в шагах цены
  )
     -- Получает ID для следующей транзакции
-    trans_id = trans_id + 1
+    Engine.trans_id = Engine.trans_id + 1
     -- Получает минимальный шаг цены
     -- local self.PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
     -- Получает максимально возможную цену заявки
@@ -488,10 +487,10 @@ function Engine:new(trdaccid, sec_code)
     local PriceMin = tonumber(getParamEx(CLASS_CODE,  self.SEC_CODE, 'PRICEMIN').param_value)
     -- Заполняет структуру для отправки транзакции на Стоп-лосс и Тэйк-профит
     local T = {}
-    T['TRANS_ID']              = tostring(trans_id)
+    T['TRANS_ID']              = tostring(Engine.trans_id)
     T['CLASSCODE']             = CLASS_CODE
     T['SECCODE']               = self.SEC_CODE
-    T['self.ACCOUNT']               = self.ACCOUNT
+    T['ACCOUNT']               = self.ACCOUNT
     T['ACTION']                = 'NEW_STOP_ORDER'                                    -- Тип заявки      
     T['STOP_ORDER_KIND']       = 'TAKE_PROFIT_STOP_ORDER'                            -- Тип стоп-заявки
     T['OPERATION']             = operation                                           -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))   
@@ -553,10 +552,10 @@ function Engine:new(trdaccid, sec_code)
     local PriceMin = tonumber(getParamEx(CLASS_CODE,  self.SEC_CODE, 'PRICEMIN').param_value)
     -- Заполняет структуру для отправки транзакции на Стоп-лосс и Тэйк-профит
     local T = {}
-    T['TRANS_ID']              = tostring(trans_id)
+    T['TRANS_ID']              = tostring(Engine.trans_id)
     T['CLASSCODE']             = CLASS_CODE
     T['SECCODE']               = self.SEC_CODE
-    T['self.ACCOUNT']               = self.ACCOUNT
+    T['ACCOUNT']               = self.ACCOUNT
     T['ACTION']                = 'NEW_STOP_ORDER'                                    -- Тип заявки      
     T['STOP_ORDER_KIND']       = 'TAKE_PROFIT_AND_STOP_LIMIT_ORDER'                  -- Тип стоп-заявки
     T['OPERATION']             = operation                                           -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))   
@@ -695,7 +694,7 @@ function Engine:new(trdaccid, sec_code)
           -- Получает стоп-заявку из строки таблицы с индексом i
           local stop_order = getItem('stop_orders', i)
           -- Если ID транзакции совпадает
-          if stop_order.trans_id == id then
+          if stop_order.Engine.trans_id == id then
              -- Возвращает номер стоп-заявки
              return stop_order.order_num
           end
@@ -782,10 +781,10 @@ function Engine:new(trdaccid, sec_code)
     end
   
     -- Получает ID для следующей транзакции
-    trans_id = trans_id + 1
+    Engine.trans_id = Engine.trans_id + 1
     -- Заполняет структуру для отправки транзакции на снятие стоп-заявки
     local T = {}
-    T['TRANS_ID']            = tostring(trans_id)
+    T['TRANS_ID']            = tostring(Engine.trans_id)
     T['CLASSCODE']           = CLASS_CODE
     T['SECCODE']             = self.SEC_CODE
     T['ACTION']              = 'KILL_STOP_ORDER'        -- Тип заявки 
