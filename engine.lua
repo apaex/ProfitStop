@@ -105,11 +105,8 @@ function Engine:Algo()
                     local stop_price = 0
                     -- Если нужно выставить в обычном режиме
                     if not NeedSetToOldPricesLevels then
-                        if totalnet < 0 then
-                            stop_price = pos_price + self.STOP_SIZE * self.PriceStep
-                        else
-                            stop_price = pos_price - self.STOP_SIZE * self.PriceStep
-                        end
+                        stop_price = self:OffsetPrice(operation, pos_price, self.STOP_SIZE * self.PriceStep)
+
                         -- Нужно выставить в те же цены
                     else
                         -- Получает цены из снятой стоп-заявки
@@ -351,6 +348,7 @@ function Engine:GetStopOrderPrices(order_num)
     end
 end
 
+
 -- Выставляет стоп-лимит заявку
 function Engine:Set_SL(
     operation, -- Операция ('B' - buy, 'S' - sell)
@@ -360,22 +358,22 @@ function Engine:Set_SL(
     -- Получает ID для следующей транзакции
     Engine.trans_id = Engine.trans_id + 1
     -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
-    local price = stop_price - ORDER_PRICE_OFFSET * self.PriceStep
-    if operation == 'B' then price = stop_price + ORDER_PRICE_OFFSET * self.PriceStep end
+    local price = self:OffsetPrice(operation, stop_price, ORDER_PRICE_OFFSET * self.PriceStep)
+
     -- Заполняет структуру для отправки транзакции на Стоп-лосс
-    local T          = {}
-    T['TRANS_ID']    = tostring(Engine.trans_id)
-    T['CLASSCODE']   = CLASS_CODE
-    T['SECCODE']     = self.SEC_CODE
-    T['ACCOUNT']     = self.ACCOUNT
-    T['ACTION']      = 'NEW_STOP_ORDER' -- Тип заявки
-    T['OPERATION']   = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
-    T['QUANTITY']    = tostring(qty) -- Количество в лотах
-    T['STOPPRICE']   = self:GetCorrectPrice(stop_price) -- Цена Стоп-Лосса
-    T['PRICE']       = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
+    local T                = {}
+    T['TRANS_ID']          = tostring(Engine.trans_id)
+    T['CLASSCODE']         = CLASS_CODE
+    T['SECCODE']           = self.SEC_CODE
+    T['ACCOUNT']           = self.ACCOUNT
+    T['ACTION']            = 'NEW_STOP_ORDER' -- Тип заявки
+    T['OPERATION']         = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
+    T['QUANTITY']          = tostring(qty) -- Количество в лотах
+    T['STOPPRICE']         = self:GetCorrectPrice(stop_price) -- Цена Стоп-Лосса
+    T['PRICE']             = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
     T['MARKET_STOP_LIMIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
-    T['EXPIRY_DATE'] = 'GTC' -- 'TODAY', 'GTC', или время
-    T['CLIENT_CODE'] = 'AS' -- Комментарий
+    T['EXPIRY_DATE']       = 'GTC' -- 'TODAY', 'GTC', или время
+    T['CLIENT_CODE']       = 'AS' -- Комментарий
 
     -- Отправляет транзакцию
     local Res = sendTransaction(T)
@@ -410,18 +408,7 @@ function Engine:SetTP(
     T['QUANTITY']        = tostring(qty) -- Количество в лотах
 
     -- Вычисляет цену профита
-    local stopprice = 0
-    if operation == 'B' then
-        stopprice = pos_price - profit_size * self.PriceStep
-        if self.PriceMin ~= nil and self.PriceMin ~= 0 and stopprice < self.PriceMin then
-            stopprice = self.PriceMin
-        end
-    elseif operation == 'S' then
-        stopprice = pos_price + profit_size * self.PriceStep
-        if self.PriceMax ~= nil and self.PriceMax ~= 0 and stopprice > self.PriceMax then
-            stopprice = self.PriceMax
-        end
-    end
+    local stopprice = self:OffsetPrice(operation, pos_price, -profit_size * self.PriceStep)
     T['STOPPRICE']    = self:GetCorrectPrice(stopprice) -- Цена Тэйк-Профита
     T['OFFSET']       = '0' -- отступ
     T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
@@ -435,8 +422,8 @@ function Engine:SetTP(
             spread = stopprice - self.PriceMin - 1 * self.PriceStep
         end
     end
-    T['SPREAD']       = self:GetCorrectPrice(spread) -- Защитный спред
-    T['SPREAD_UNITS'] = 'PRICE_UNITS' -- в шагах цены
+    T['SPREAD']             = self:GetCorrectPrice(spread) -- Защитный спред
+    T['SPREAD_UNITS']       = 'PRICE_UNITS' -- в шагах цены
     T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
 
     T['EXPIRY_DATE'] = 'GTC' -- 'TODAY', 'GTC', или время
@@ -472,21 +459,10 @@ function Engine:SetTP_SL(
     T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_AND_STOP_LIMIT_ORDER' -- Тип стоп-заявки
     T['OPERATION']       = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
     T['QUANTITY']        = tostring(qty) -- Количество в лотах
-   --  T['TYPE']            = 'M'
+    --  T['TYPE']            = 'M'
 
     -- Вычисляет цену профита
-    local stopprice = 0
-    if operation == 'B' then
-        stopprice = pos_price - profit_size * self.PriceStep
-        if self.PriceMin ~= nil and self.PriceMin ~= 0 and stopprice < self.PriceMin then
-            stopprice = self.PriceMin
-        end
-    elseif operation == 'S' then
-        stopprice = pos_price + profit_size * self.PriceStep
-        if self.PriceMax ~= nil and self.PriceMax ~= 0 and stopprice > self.PriceMax then
-            stopprice = self.PriceMax
-        end
-    end
+    local stopprice = self:OffsetPrice(operation, pos_price, -profit_size * self.PriceStep)
     T['STOPPRICE']    = self:GetCorrectPrice(stopprice) -- Цена Тэйк-Профита
     T['OFFSET']       = '0' -- отступ
     T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
@@ -505,32 +481,11 @@ function Engine:SetTP_SL(
     T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
 
     -- Вычисляет цену стопа
-    local stopprice2 = 0
-    if operation == 'B' then
-        stopprice2 = pos_price + stop_size * self.PriceStep
-        if self.PriceMax ~= nil and self.PriceMax ~= 0 and stopprice2 > self.PriceMax then
-            stopprice2 = self.PriceMax
-        end
-    elseif operation == 'S' then
-        stopprice2 = pos_price - stop_size * self.PriceStep
-        if self.PriceMin ~= nil and self.PriceMin ~= 0 and stopprice2 < self.PriceMin then
-            stopprice2 = self.PriceMin
-        end
-    end
+    local stopprice2 = self:OffsetPrice(operation, pos_price, stop_size * self.PriceStep)
     T['STOPPRICE2'] = self:GetCorrectPrice(stopprice2) -- Цена Стоп-Лосса
+
     -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
-    local price     = 0
-    if operation == 'B' then
-        price = stopprice2 + ORDER_PRICE_OFFSET * self.PriceStep
-        if self.PriceMax ~= nil and self.PriceMax ~= 0 and price > self.PriceMax then
-            price = self.PriceMax
-        end
-    elseif operation == 'S' then
-        price = stopprice2 - ORDER_PRICE_OFFSET * self.PriceStep
-        if self.PriceMin ~= nil and self.PriceMin ~= 0 and price < self.PriceMin then
-            price = self.PriceMin
-        end
-    end
+    local price     = self:OffsetPrice(operation, stopprice2, ORDER_PRICE_OFFSET * self.PriceStep)
     T['PRICE']             = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
     T['MARKET_STOP_LIMIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
     T['EXPIRY_DATE']       = 'GTC' -- 'TODAY', 'GTC', или время
@@ -784,4 +739,19 @@ function Engine:GetCorrectPrice(price) -- STRING
         price = math_round(price / self.PriceStep) * self.PriceStep
         return tostring(math.floor(price))
     end
+end
+
+function Engine:OffsetPrice(operation, price, offs)
+    if operation == 'B' then
+        price = price + offs
+        if self.PriceMax ~= nil and self.PriceMax ~= 0 and price > self.PriceMax then
+            price = self.PriceMax
+        end
+    elseif operation == 'S' then
+        price = price - offs
+        if self.PriceMin ~= nil and self.PriceMin ~= 0 and price < self.PriceMin then
+            price = self.PriceMin
+        end
+    end
+    return price
 end
