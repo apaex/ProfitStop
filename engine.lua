@@ -81,16 +81,11 @@ function Engine:Algo()
                     -- Получает цены из снятой стоп-заявки
                     local profit_price, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
 
-                    if totalnet > 0 then
-                        profit_size = profit_size == 0 and 0 or
-                            math.floor(math_round((profit_price - pos_price) / self.PriceStep))
-                        stop_size = stop_size == 0 and 0 or
-                            math.floor(math_round((pos_price - stop_price) / self.PriceStep))
-                    else
-                        profit_size = profit_size == 0 and 0 or
-                            math.floor(math_round((pos_price - profit_price) / self.PriceStep))
-                        stop_size = stop_size == 0 and 0 or
-                            math.floor(math_round((stop_price - pos_price) / self.PriceStep))
+                    if profit_size ~= 0 and profit_price ~= 0 then
+                        profit_size = math.abs(math.floor(math_round((profit_price - pos_price) / self.PriceStep)))
+                    end
+                    if stop_size ~= 0 and stop_price ~= 0 then
+                        stop_size = math.abs(math.floor(math_round((pos_price - stop_price) / self.PriceStep)))
                     end
                 end
 
@@ -147,7 +142,7 @@ function Engine:Foo(stop_order_num)
     if not stop_order or not stop_order.linkedorder then
         return
     end
-    
+
     message(' filled_qty ' .. stop_order.filled_qty .. ' balance ' .. stop_order.balance)
 
     local order = Last('orders', function(t) return t.order_num == stop_order.linkedorder end)
