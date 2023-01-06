@@ -389,8 +389,7 @@ function Engine:SetTP(
 )
     -- Получает ID для следующей транзакции
     Engine.trans_id      = Engine.trans_id + 1
-    -- Получает минимальный шаг цены
-    -- local self.PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
+
     -- Получает максимально возможную цену заявки
     local PriceMax       = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'PRICEMAX').param_value)
     -- Получает минимально возможную цену заявки
@@ -458,8 +457,6 @@ function Engine:SetTP_SL(
     -- Получает ID для следующей транзакции
     Engine.trans_id = Engine.trans_id + 1
 
-    -- Получает минимальный шаг цены
-    -- local self.PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
     -- Получает максимально возможную цену заявки
     local PriceMax       = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'PRICEMAX').param_value)
     -- Получает минимально возможную цену заявки
@@ -758,8 +755,7 @@ end
 function Engine:GetCorrectPrice(price) -- STRING
     -- Получает точность цены по инструменту
     local scale = getSecurityInfo(CLASS_CODE, self.SEC_CODE).scale
-    -- Получает минимальный шаг цены инструмента
-    -- local PriceStep = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, "SEC_PRICE_STEP").param_value)
+
     -- Если после запятой должны быть цифры
     if scale > 0 then
         price = tostring(price)
