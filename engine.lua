@@ -6,8 +6,8 @@ function Engine:new(trdaccid, sec_code)
 
     newObj.ACCOUNT     = trdaccid
     newObj.SEC_CODE    = sec_code -- Код бумаги
-    newObj.STOP_SIZE   = 300 -- Размер стопа в минимальных шагах цены (если 0, ставится только профит)
-    newObj.PROFIT_SIZE = 2000 -- Размер профита в минимальных шагах цены (если 0, ставится только стоп)
+    newObj.STOP_SIZE   = 30 -- Размер стопа в минимальных шагах цены (если 0, ставится только профит)
+    newObj.PROFIT_SIZE = 200 -- Размер профита в минимальных шагах цены (если 0, ставится только стоп)
 
     -- Получает минимальный шаг цены инструмента
     newObj.PriceStep = tonumber(getParamEx(CLASS_CODE, sec_code, "SEC_PRICE_STEP").param_value)
