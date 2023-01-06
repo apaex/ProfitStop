@@ -70,7 +70,7 @@ end
 
 function GetClientRisk()
 	local in_assets, assets = unpack(GetClientBallance())
-	if in_assets == 0 then
+	if in_assets == nil or in_assets == 0 then
 		return 0
 	end
 	return (in_assets - assets) / in_assets * 100.
