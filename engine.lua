@@ -6,8 +6,8 @@ function Engine:new(trdaccid, sec_code)
 
     newObj.ACCOUNT     = trdaccid
     newObj.SEC_CODE    = sec_code -- Код бумаги
-    newObj.STOP_SIZE   = 300 -- Размер стопа в минимальных шагах цены (если 0, ставится только профит)
-    newObj.PROFIT_SIZE = 2000 -- Размер профита в минимальных шагах цены (если 0, ставится только стоп)
+    newObj.STOP_SIZE   = STOP_SIZE -- Размер стопа в минимальных шагах цены (если 0, ставится только профит)
+    newObj.PROFIT_SIZE = PROFIT_SIZE -- Размер профита в минимальных шагах цены (если 0, ставится только стоп)
 
     -- Получает минимальный шаг цены инструмента
     newObj.PriceStep = tonumber(getParamEx(CLASS_CODE, sec_code, "SEC_PRICE_STEP").param_value)
@@ -308,6 +308,11 @@ function Engine:SetTP_SL(
     profit_size, -- Размер профита в шагах цены
     stop_size -- Размер стопа в шагах цены
 )
+    message("СТОП: " ..
+        self.SEC_CODE .. " " ..
+        operation .. ":" .. qty .. ", цена позиции " ..
+        pos_price .. ", профит " .. profit_size .. ", стоп " .. stop_size)
+
     -- Получает ID для следующей транзакции
     Engine.trans_id = Engine.trans_id + 1
 
@@ -320,7 +325,6 @@ function Engine:SetTP_SL(
     T['ACTION']    = 'NEW_STOP_ORDER' -- Тип заявки
     T['OPERATION'] = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
     T['QUANTITY']  = tostring(qty) -- Количество в лотах
-    --  T['TYPE']            = 'M'
 
     if profit_size > 0 then
         -- Вычисляет цену профита
@@ -329,12 +333,11 @@ function Engine:SetTP_SL(
         T['OFFSET']       = '0' -- отступ
         T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
 
-        local spread_p          = self:OffsetPrice(operation, stopprice, ORDER_PRICE_OFFSET * self.PriceStep,
+        local spread_p    = self:OffsetPrice(operation, stopprice, ORDER_PRICE_OFFSET * self.PriceStep,
             IGNORE_TP_LIMITS)
-        local spread            = math.abs(spread_p - stopprice) -- если не нужна проверка лимитов, то можно вообще = ORDER_PRICE_OFFSET * self.PriceStep
-        T['SPREAD']             = self:GetCorrectPrice(spread) -- Защитный спред
-        T['SPREAD_UNITS']       = 'PRICE_UNITS' -- в шагах цены
-        T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
+        local spread      = math.abs(spread_p - stopprice) -- если не нужна проверка лимитов, то можно вообще = ORDER_PRICE_OFFSET * self.PriceStep
+        T['SPREAD']       = self:GetCorrectPrice(spread) -- Защитный спред
+        T['SPREAD_UNITS'] = 'PRICE_UNITS' -- в шагах цены
     end
 
     if stop_size > 0 then
@@ -343,17 +346,21 @@ function Engine:SetTP_SL(
         T['STOPPRICE2'] = self:GetCorrectPrice(stopprice2) -- Цена Стоп-Лосса
 
         -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
-        local price            = self:OffsetPrice(operation, stopprice2, ORDER_PRICE_OFFSET * self.PriceStep)
-        T['PRICE']             = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
-        T['MARKET_STOP_LIMIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
+        local price = self:OffsetPrice(operation, stopprice2, ORDER_PRICE_OFFSET * self.PriceStep)
+        T['PRICE']  = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
     end
 
     if profit_size > 0 and stop_size > 0 then
         T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_AND_STOP_LIMIT_ORDER' -- Тип стоп-заявки
+        T['MARKET_STOP_LIMIT'] = 'YES' -- 'YES', или 'NO'
+        T['MARKET_TAKE_PROFIT'] = 'YES' -- 'YES', или 'NO'
     elseif stop_size == 0 then
         T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_STOP_ORDER'
+        T['TYPE']            = 'M'
     elseif profit_size == 0 then
-        T['STOPPRICE'] = T['STOPPRICE2']
+        T['STOP_ORDER_KIND'] = 'SIMPLE_STOP_ORDER'
+        T['TYPE']            = 'M'
+        T['STOPPRICE']       = T['STOPPRICE2']
     end
 
     T['EXPIRY_DATE']       = 'GTC' -- 'TODAY', 'GTC', или время
@@ -364,7 +371,6 @@ function Engine:SetTP_SL(
     local Res = sendTransaction(T)
     if Res ~= '' then
         message(self.SEC_CODE .. ' Ошибка выставления стоп-заявки: ' .. Res)
-        message(self.SEC_CODE .. ' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
         OnStop()
     end
 end
