@@ -26,6 +26,8 @@ function main()
       end
       sleep(1000)
    end
+
+   message(' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
 end
 
 function OnStop()
