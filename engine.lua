@@ -34,6 +34,8 @@ function Engine:Algo()
                 if self:CheckStopOrderActive(self.StopOrderNum) then
                     -- Снимает
                     self:Kill_SO(self.StopOrderNum)
+                    message("вот здесь позиция изменилась при активной стоп-заявке бота "
+                        .. totalnet)
                     -- Запоминает, что нужно перевыставить стоп-заявку в те же цены
                     if MOVE_STOP_BY_POS == 0 and
                         ((self.StopPos > 0 and totalnet < 0) or (self.StopPos < 0 and totalnet > 0)) then
