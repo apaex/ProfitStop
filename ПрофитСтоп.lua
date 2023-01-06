@@ -5,6 +5,12 @@ setPrefix("PS")
 IsRun = true
 
 function main()
+
+   if PROFIT_PER == 0 and STOP_PER == 0 then
+      message('Вы не указали ни профит, ни стоп, бот "ПрофитСтоп" ОТКЛЮЧИЛСЯ !!!')
+      return
+   end
+
    local engines = {}
 
    while IsRun do
