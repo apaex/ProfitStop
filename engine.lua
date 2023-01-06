@@ -356,10 +356,8 @@ function Engine:SetTP_SL(
         T['MARKET_TAKE_PROFIT'] = 'YES' -- 'YES', или 'NO'
     elseif stop_size == 0 then
         T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_STOP_ORDER'
-        T['TYPE']            = 'M'
     elseif profit_size == 0 then
         T['STOP_ORDER_KIND'] = 'SIMPLE_STOP_ORDER'
-        T['TYPE']            = 'M'
         T['STOPPRICE']       = T['STOPPRICE2']
     end
 
