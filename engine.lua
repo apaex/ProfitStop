@@ -41,6 +41,9 @@ function Engine:Algo()
                         ((self.StopPos > 0 and totalnet < 0) or (self.StopPos < 0 and totalnet > 0)) then
                         NeedSetToOldPricesLevels = true
                     end
+                else
+                    message("вот здесь позиция изменилась при НЕ активной стоп-заявке бота "
+                    .. totalnet)
                 end
                 -- Нет стоп заявки бота
             else
