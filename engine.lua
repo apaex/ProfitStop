@@ -36,6 +36,7 @@ function Engine:Algo()
                     self:Kill_SO(self.StopOrderNum)
                     message("вот здесь позиция изменилась при активной стоп-заявке бота "
                         .. totalnet)
+                    self:Foo(self.StopOrderNum)
                     -- Запоминает, что нужно перевыставить стоп-заявку в те же цены
                     if MOVE_STOP_BY_POS == 0 and
                         ((self.StopPos > 0 and totalnet < 0) or (self.StopPos < 0 and totalnet > 0)) then
@@ -43,7 +44,8 @@ function Engine:Algo()
                     end
                 else
                     message("вот здесь позиция изменилась при НЕ активной стоп-заявке бота "
-                    .. totalnet)
+                        .. totalnet)
+                    self:Foo(self.StopOrderNum)
                 end
                 -- Нет стоп заявки бота
             else
@@ -136,6 +138,24 @@ function Engine:Algo()
         self.PROFIT_SIZE = self._PROFIT_SIZE
         NeedSetToOldPricesLevels = false
     end
+end
+
+-- Найдем заявку, созданную исполненной стоп-заявкой
+function Engine:Foo(stop_order_num)
+    -- Получим нашу стоп-заявку
+    local stop_order = Last('stop_orders', function(t) return t.order_num == stop_order_num end)
+    if not stop_order or not stop_order.linkedorder then
+        return
+    end
+    
+    message(' filled_qty ' .. stop_order.filled_qty .. ' balance ' .. stop_order.balance)
+
+    local order = Last('orders', function(t) return t.order_num == stop_order.linkedorder end)
+    if not order then
+        return
+    end
+
+    message("выброшена заявка " .. order.order_num .. " ext_order_status " .. order.ext_order_status)
 end
 
 -- Получает цену текущей позиции
@@ -313,7 +333,7 @@ function Engine:SetTP_SL(
     profit_size, -- Размер профита в шагах цены
     stop_size -- Размер стопа в шагах цены
 )
-    message("СТОП: " ..
+    message("Ставим стоп-заявку: " ..
         self.SEC_CODE .. " " ..
         operation .. ":" .. qty .. ", цена позиции " ..
         pos_price .. ", профит " .. profit_size .. ", стоп " .. stop_size)
