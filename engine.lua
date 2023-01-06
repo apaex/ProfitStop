@@ -412,16 +412,9 @@ function Engine:SetTP(
     T['STOPPRICE']    = self:GetCorrectPrice(stopprice) -- Цена Тэйк-Профита
     T['OFFSET']       = '0' -- отступ
     T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
-    local spread      = ORDER_PRICE_OFFSET * self.PriceStep
-    if operation == 'B' then
-        if self.PriceMax ~= nil and self.PriceMax ~= 0 and stopprice + spread > self.PriceMax then
-            spread = self.PriceMax - stopprice - 1 * self.PriceStep
-        end
-    elseif operation == 'S' then
-        if self.PriceMin ~= nil and self.PriceMin ~= 0 and stopprice - spread < self.PriceMin then
-            spread = stopprice - self.PriceMin - 1 * self.PriceStep
-        end
-    end
+
+    local spread_p = self:OffsetPrice(operation, stopprice, ORDER_PRICE_OFFSET * self.PriceStep, IGNORE_TP_LIMITS)
+    local spread = math.abs(spread_p - stopprice)  -- если не нужна проверка лимитов, то можно вообще = ORDER_PRICE_OFFSET * self.PriceStep
     T['SPREAD']             = self:GetCorrectPrice(spread) -- Защитный спред
     T['SPREAD_UNITS']       = 'PRICE_UNITS' -- в шагах цены
     T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
@@ -466,16 +459,9 @@ function Engine:SetTP_SL(
     T['STOPPRICE']    = self:GetCorrectPrice(stopprice) -- Цена Тэйк-Профита
     T['OFFSET']       = '0' -- отступ
     T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
-    local spread      = ORDER_PRICE_OFFSET * self.PriceStep
-    if operation == 'B' then
-        if self.PriceMax ~= nil and self.PriceMax ~= 0 and stopprice + spread > self.PriceMax then
-            spread = self.PriceMax - stopprice - 1 * self.PriceStep
-        end
-    elseif operation == 'S' then
-        if self.PriceMin ~= nil and self.PriceMin ~= 0 and stopprice - spread < self.PriceMin then
-            spread = stopprice - self.PriceMin - 1 * self.PriceStep
-        end
-    end
+
+    local spread_p = self:OffsetPrice(operation, stopprice, ORDER_PRICE_OFFSET * self.PriceStep, IGNORE_TP_LIMITS)
+    local spread = math.abs(spread_p - stopprice)  -- если не нужна проверка лимитов, то можно вообще = ORDER_PRICE_OFFSET * self.PriceStep
     T['SPREAD']             = self:GetCorrectPrice(spread) -- Защитный спред
     T['SPREAD_UNITS']       = 'PRICE_UNITS' -- в шагах цены
     T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
@@ -741,15 +727,15 @@ function Engine:GetCorrectPrice(price) -- STRING
     end
 end
 
-function Engine:OffsetPrice(operation, price, offs)
+function Engine:OffsetPrice(operation, price, offs, ignore_limits)
     if operation == 'B' then
         price = price + offs
-        if self.PriceMax ~= nil and self.PriceMax ~= 0 and price > self.PriceMax then
+        if not ignore_limits and self.PriceMax ~= nil and self.PriceMax ~= 0 and price > self.PriceMax then
             price = self.PriceMax
         end
     elseif operation == 'S' then
         price = price - offs
-        if self.PriceMin ~= nil and self.PriceMin ~= 0 and price < self.PriceMin then
+        if not ignore_limits and self.PriceMin ~= nil and self.PriceMin ~= 0 and price < self.PriceMin then
             price = self.PriceMin
         end
     end
