@@ -56,93 +56,45 @@ function Engine:Algo()
                 -- Получает минимально возможную цену заявки
                 self.PriceMin = tonumber(getParamEx(CLASS_CODE, self.SEC_CODE, 'PRICEMIN').param_value)
 
+                -- запоминает изменение позиции стоп-заявкой
+                self.StopPos = -totalnet
 
                 -- Получает цену текущей позиции
                 local pos_price = self:GetPosPrice()
                 -- Получает количество лотов без знака в заявке
                 local qty = math.floor(math.abs(totalnet))
-                -- Определяет направление стоп-заявки и запоминает изменение позиции стоп-заявкой
-                local operation = 'S'
-                self.StopPos = -qty
-                if totalnet < 0 then
-                    operation = 'B'
-                    self.StopPos = qty
+                -- Определяет направление стоп-заявки
+                local operation = totalnet > 0 and 'S' or 'B'
+
+                local profit_size = self.PROFIT_SIZE -- Размер профита в шагах цены
+                local stop_size = self.STOP_SIZE -- Размер стопа в шагах цены
+
+                -- Нужно выставить в те же цены
+                if NeedSetToOldPricesLevels then
+                    -- Получает цены из снятой стоп-заявки
+                    local profit_price, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
+
+                    if totalnet > 0 then
+                        profit_size = profit_size == 0 and 0 or
+                            math.floor(math_round((profit_price - pos_price) / self.PriceStep))
+                        stop_size = stop_size == 0 and 0 or
+                            math.floor(math_round((pos_price - stop_price) / self.PriceStep))
+                    else
+                        profit_size = profit_size == 0 and 0 or
+                            math.floor(math_round((pos_price - profit_price) / self.PriceStep))
+                        stop_size = stop_size == 0 and 0 or
+                            math.floor(math_round((stop_price - pos_price) / self.PriceStep))
+                    end
                 end
-                local profit_size = 0
-                local stop_size = 0
 
-                -- Если нужно выставить стоп и профит
-                if self.STOP_SIZE ~= 0 and self.PROFIT_SIZE ~= 0 then
-                    -- Если нужно выставить в обычном режиме
-                    if not NeedSetToOldPricesLevels then
-                        profit_size = self.PROFIT_SIZE -- Размер профита в шагах цены
-                        stop_size = self.STOP_SIZE -- Размер стопа в шагах цены
-                        -- Нужно выставить в те же цены
-                    else
-                        -- Получает цены из снятой стоп-заявки
-                        local profit_price, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
-
-                        if totalnet > 0 then
-                            profit_size = math.floor(math_round((profit_price - pos_price) / self.PriceStep))
-                            stop_size = math.floor(math_round((pos_price - stop_price) / self.PriceStep))
-                        else
-                            profit_size = math.floor(math_round((pos_price - profit_price) / self.PriceStep))
-                            stop_size = math.floor(math_round((stop_price - pos_price) / self.PriceStep))
-                        end
-                    end
-
-                    -- Выставляет "Тейк профит и Стоп лимит" заявку
-                    self:SetTP_SL(
-                        operation, -- Операция ('B', или 'S')
-                        pos_price, -- Цена позиции, на которую выставляется стоп-заявка
-                        qty, -- Количество лотов
-                        profit_size, -- Размер профита в шагах цены
-                        stop_size-- Размер стопа в шагах цены
-                    )
-
-                    -- Нужно выставить только стоп
-                elseif self.PROFIT_SIZE == 0 then
-                    local stop_price = 0
-                    -- Если нужно выставить в обычном режиме
-                    if not NeedSetToOldPricesLevels then
-                        stop_price = self:OffsetPrice(operation, pos_price, self.STOP_SIZE * self.PriceStep)
-
-                        -- Нужно выставить в те же цены
-                    else
-                        -- Получает цены из снятой стоп-заявки
-                        _, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
-                    end
-                    -- Выставляет стоп-заявку
-                    self:Set_SL(
-                        operation,
-                        stop_price, -- почему-то в пунктах, а не в шагах
-                        qty
-                    )
-                    -- Нужно выставить только профит
-                elseif self.STOP_SIZE == 0 then
-                    -- Если нужно выставить в обычном режиме
-                    if not NeedSetToOldPricesLevels then
-                        profit_size = self.PROFIT_SIZE -- Размер профита в шагах цены
-                        -- Нужно выставить в те же цены
-                    else
-                        -- Получает цены из снятой стоп-заявки
-                        local profit_price, _ = self:GetStopOrderPrices(self.StopOrderNum)
-
-                        if totalnet > 0 then
-                            profit_size = math.floor(math_round((profit_price - pos_price) / self.PriceStep))
-                        else
-                            profit_size = math.floor(math_round((pos_price - profit_price) / self.PriceStep))
-                        end
-
-                    end
-                    -- Выставляет "Тейк профит" заявку
-                    self:SetTP(
-                        operation, -- Операция ('B', или 'S')
-                        pos_price, -- Цена позиции, на которую выставляется стоп-заявка
-                        qty, -- Количество лотов
-                        profit_size-- Размер профита в шагах цены
-                    )
-                end
+                -- Выставляет "Тейк профит и Стоп лимит" заявку
+                self:SetTP_SL(
+                    operation, -- Операция ('B', или 'S')
+                    pos_price, -- Цена позиции, на которую выставляется стоп-заявка
+                    qty, -- Количество лотов
+                    profit_size, -- Размер профита в шагах цены
+                    stop_size-- Размер стопа в шагах цены
+                )
 
                 -- Если робот аварийно завршил работу, выходит из функции
                 if not IsRun then return end
@@ -348,89 +300,6 @@ function Engine:GetStopOrderPrices(order_num)
     end
 end
 
-
--- Выставляет стоп-лимит заявку
-function Engine:Set_SL(
-    operation, -- Операция ('B' - buy, 'S' - sell)
-    stop_price, -- Цена Стоп-Лосса
-    qty -- Количество в лотах
-)
-    -- Получает ID для следующей транзакции
-    Engine.trans_id = Engine.trans_id + 1
-    -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
-    local price = self:OffsetPrice(operation, stop_price, ORDER_PRICE_OFFSET * self.PriceStep)
-
-    -- Заполняет структуру для отправки транзакции на Стоп-лосс
-    local T                = {}
-    T['TRANS_ID']          = tostring(Engine.trans_id)
-    T['CLASSCODE']         = CLASS_CODE
-    T['SECCODE']           = self.SEC_CODE
-    T['ACCOUNT']           = self.ACCOUNT
-    T['ACTION']            = 'NEW_STOP_ORDER' -- Тип заявки
-    T['OPERATION']         = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
-    T['QUANTITY']          = tostring(qty) -- Количество в лотах
-    T['STOPPRICE']         = self:GetCorrectPrice(stop_price) -- Цена Стоп-Лосса
-    T['PRICE']             = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
-    T['MARKET_STOP_LIMIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
-    T['EXPIRY_DATE']       = 'GTC' -- 'TODAY', 'GTC', или время
-    T['CLIENT_CODE']       = 'AS' -- Комментарий
-
-    -- Отправляет транзакцию
-    local Res = sendTransaction(T)
-    -- Если при отправке транзакции возникла ошибка
-    if Res ~= '' then
-        -- Выводит ошибку
-        message(self.SEC_CODE .. ' Ошибка транзакции стоп-лимит: ' .. Res)
-        message(self.SEC_CODE .. ' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
-        OnStop()
-    end
-end
-
--- Выставляет "Тейк профит" заявку
-function Engine:SetTP(
-    operation, -- Операция ('B', или 'S')
-    pos_price, -- Цена позиции, на которую выставляется стоп-заявка
-    qty, -- Количество лотов
-    profit_size -- Размер профита в шагах цены
-)
-    -- Получает ID для следующей транзакции
-    Engine.trans_id = Engine.trans_id + 1
-
-    -- Заполняет структуру для отправки транзакции на Стоп-лосс и Тэйк-профит
-    local T              = {}
-    T['TRANS_ID']        = tostring(Engine.trans_id)
-    T['CLASSCODE']       = CLASS_CODE
-    T['SECCODE']         = self.SEC_CODE
-    T['ACCOUNT']         = self.ACCOUNT
-    T['ACTION']          = 'NEW_STOP_ORDER' -- Тип заявки
-    T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_STOP_ORDER' -- Тип стоп-заявки
-    T['OPERATION']       = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
-    T['QUANTITY']        = tostring(qty) -- Количество в лотах
-
-    -- Вычисляет цену профита
-    local stopprice = self:OffsetPrice(operation, pos_price, -profit_size * self.PriceStep)
-    T['STOPPRICE']    = self:GetCorrectPrice(stopprice) -- Цена Тэйк-Профита
-    T['OFFSET']       = '0' -- отступ
-    T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
-
-    local spread_p = self:OffsetPrice(operation, stopprice, ORDER_PRICE_OFFSET * self.PriceStep, IGNORE_TP_LIMITS)
-    local spread = math.abs(spread_p - stopprice)  -- если не нужна проверка лимитов, то можно вообще = ORDER_PRICE_OFFSET * self.PriceStep
-    T['SPREAD']             = self:GetCorrectPrice(spread) -- Защитный спред
-    T['SPREAD_UNITS']       = 'PRICE_UNITS' -- в шагах цены
-    T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
-
-    T['EXPIRY_DATE'] = 'GTC' -- 'TODAY', 'GTC', или время
-    T['CLIENT_CODE'] = 'AS' -- Комментарий
-
-    -- Отправляет транзакцию
-    local Res = sendTransaction(T)
-    if Res ~= '' then
-        message(self.SEC_CODE .. ' Ошибка выставления стоп-заявки: ' .. Res)
-        message(self.SEC_CODE .. ' Бот "ПрофитСтоп" ВЫКЛЮЧЕН !!!"')
-        OnStop()
-    end
-end
-
 -- Выставляет "Тейк профит и Стоп лимит" заявку
 function Engine:SetTP_SL(
     operation, -- Операция ('B', или 'S')
@@ -443,37 +312,50 @@ function Engine:SetTP_SL(
     Engine.trans_id = Engine.trans_id + 1
 
     -- Заполняет структуру для отправки транзакции на Стоп-лосс и Тэйк-профит
-    local T              = {}
-    T['TRANS_ID']        = tostring(Engine.trans_id)
-    T['CLASSCODE']       = CLASS_CODE
-    T['SECCODE']         = self.SEC_CODE
-    T['ACCOUNT']         = self.ACCOUNT
-    T['ACTION']          = 'NEW_STOP_ORDER' -- Тип заявки
-    T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_AND_STOP_LIMIT_ORDER' -- Тип стоп-заявки
-    T['OPERATION']       = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
-    T['QUANTITY']        = tostring(qty) -- Количество в лотах
+    local T        = {}
+    T['TRANS_ID']  = tostring(Engine.trans_id)
+    T['CLASSCODE'] = CLASS_CODE
+    T['SECCODE']   = self.SEC_CODE
+    T['ACCOUNT']   = self.ACCOUNT
+    T['ACTION']    = 'NEW_STOP_ORDER' -- Тип заявки
+    T['OPERATION'] = operation -- Операция ('B' - покупка(BUY), 'S' - продажа(SELL))
+    T['QUANTITY']  = tostring(qty) -- Количество в лотах
     --  T['TYPE']            = 'M'
 
-    -- Вычисляет цену профита
-    local stopprice = self:OffsetPrice(operation, pos_price, -profit_size * self.PriceStep)
-    T['STOPPRICE']    = self:GetCorrectPrice(stopprice) -- Цена Тэйк-Профита
-    T['OFFSET']       = '0' -- отступ
-    T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
+    if profit_size > 0 then
+        -- Вычисляет цену профита
+        local stopprice   = self:OffsetPrice(operation, pos_price, -profit_size * self.PriceStep)
+        T['STOPPRICE']    = self:GetCorrectPrice(stopprice) -- Цена Тэйк-Профита
+        T['OFFSET']       = '0' -- отступ
+        T['OFFSET_UNITS'] = 'PRICE_UNITS' -- в шагах цены
 
-    local spread_p = self:OffsetPrice(operation, stopprice, ORDER_PRICE_OFFSET * self.PriceStep, IGNORE_TP_LIMITS)
-    local spread = math.abs(spread_p - stopprice)  -- если не нужна проверка лимитов, то можно вообще = ORDER_PRICE_OFFSET * self.PriceStep
-    T['SPREAD']             = self:GetCorrectPrice(spread) -- Защитный спред
-    T['SPREAD_UNITS']       = 'PRICE_UNITS' -- в шагах цены
-    T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
+        local spread_p          = self:OffsetPrice(operation, stopprice, ORDER_PRICE_OFFSET * self.PriceStep,
+            IGNORE_TP_LIMITS)
+        local spread            = math.abs(spread_p - stopprice) -- если не нужна проверка лимитов, то можно вообще = ORDER_PRICE_OFFSET * self.PriceStep
+        T['SPREAD']             = self:GetCorrectPrice(spread) -- Защитный спред
+        T['SPREAD_UNITS']       = 'PRICE_UNITS' -- в шагах цены
+        T['MARKET_TAKE_PROFIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
+    end
 
-    -- Вычисляет цену стопа
-    local stopprice2 = self:OffsetPrice(operation, pos_price, stop_size * self.PriceStep)
-    T['STOPPRICE2'] = self:GetCorrectPrice(stopprice2) -- Цена Стоп-Лосса
+    if stop_size > 0 then
+        -- Вычисляет цену стопа
+        local stopprice2 = self:OffsetPrice(operation, pos_price, stop_size * self.PriceStep)
+        T['STOPPRICE2'] = self:GetCorrectPrice(stopprice2) -- Цена Стоп-Лосса
 
-    -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
-    local price     = self:OffsetPrice(operation, stopprice2, ORDER_PRICE_OFFSET * self.PriceStep)
-    T['PRICE']             = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
-    T['MARKET_STOP_LIMIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
+        -- Вычисляет цену, по которой выставится заявка при срабатывании стопа
+        local price            = self:OffsetPrice(operation, stopprice2, ORDER_PRICE_OFFSET * self.PriceStep)
+        T['PRICE']             = self:GetCorrectPrice(price) -- Цена, по которой выставится заявка при срабатывании Стоп-Лосса (для рыночной заявки по акциям должна быть 0)
+        T['MARKET_STOP_LIMIT'] = ORDER_PRICE_OFFSET == 0 and 'YES' or 'NO' -- 'YES', или 'NO'
+    end
+
+    if profit_size > 0 and stop_size > 0 then
+        T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_AND_STOP_LIMIT_ORDER' -- Тип стоп-заявки
+    elseif stop_size == 0 then
+        T['STOP_ORDER_KIND'] = 'TAKE_PROFIT_STOP_ORDER'
+    elseif profit_size == 0 then
+        T['STOPPRICE'] = T['STOPPRICE2']
+    end
+
     T['EXPIRY_DATE']       = 'GTC' -- 'TODAY', 'GTC', или время
     T['IS_ACTIVE_IN_TIME'] = 'NO' -- Признак действия заявки типа «Тэйк-профит и стоп-лимит» в течение определенного интервала времени. Значения «YES» или «NO»
     T['CLIENT_CODE']       = 'AS' -- Комментарий
