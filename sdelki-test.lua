@@ -1,7 +1,7 @@
-dofile(getScriptPath() .. "\\tools.lua")
-dofile(getScriptPath() .. "\\qtools.lua")
-dofile(getScriptPath() .. "\\sdelki.lua")
-dofile(getScriptPath() .. "\\config.lua")
+dofile(getScriptPath() .. "\\src\\tools.lua")
+dofile(getScriptPath() .. "\\src\\qtools.lua")
+dofile(getScriptPath() .. "\\src\\sdelki.lua")
+dofile(getScriptPath() .. "\\src\\config.lua")
 setPrefix("PS")
 IsRun = true
 

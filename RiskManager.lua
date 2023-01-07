@@ -1,6 +1,6 @@
-dofile(getScriptPath() .. "\\tools.lua")
-dofile(getScriptPath() .. "\\transaction.lua")
-dofile(getScriptPath() .. "\\config.lua")
+dofile(getScriptPath() .. "\\src\\tools.lua")
+dofile(getScriptPath() .. "\\src\\transaction.lua")
+dofile(getScriptPath() .. "\\src\\config.lua")
 setPrefix("PS")
 IsRun = true
 
