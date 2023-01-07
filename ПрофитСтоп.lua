@@ -1,5 +1,7 @@
 dofile(getScriptPath() .. "\\tools.lua")
+dofile(getScriptPath() .. "\\qtools.lua")
 dofile(getScriptPath() .. "\\config.lua")
+dofile(getScriptPath() .. "\\sdelki.lua")
 dofile(getScriptPath() .. "\\engine.lua")
 setPrefix("PS")
 IsRun = true
