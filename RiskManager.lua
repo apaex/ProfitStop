@@ -1,4 +1,5 @@
 dofile(getScriptPath() .. "\\src\\tools.lua")
+dofile(getScriptPath() .. "\\src\\qtools.lua")
 dofile(getScriptPath() .. "\\src\\transaction.lua")
 dofile(getScriptPath() .. "\\src\\config.lua")
 setPrefix("PS")
