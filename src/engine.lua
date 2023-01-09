@@ -40,7 +40,7 @@ function Engine:Algo()
                         NeedSetToOldPricesLevels = true
                     end
                 else
-                    -- проверим, не исполняется ли заявка от стопа
+                    -- проверим, не исполняется ли заявка от стоп-заявки
                     if self:CheckActiveOrderForStopOrder(self.StopOrderNum) then
                         message("Заявка ещё исполняется, подождем")
                         return

@@ -49,7 +49,13 @@ function SaveToCSV(name)
         row = getItem(name, i)
 
         for key, v in pairs(row) do
-            file:write(v .. ";")
+            if type(v) ~= "table" then
+                file:write(v .. ";")
+            else
+                file:write("[TABLE];")
+            end
+
+
         end
         file:write("\n")
     end

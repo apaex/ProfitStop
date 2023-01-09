@@ -6,12 +6,13 @@ setPrefix("PS")
 IsRun = true
 
 function main()
+    SaveToCSV("trades")
     local sec_codes = {
         'RIH3',
         'MXH3',
         'SiH3',
         'BRG3',
-      --  'NGF3',
+        'VBH3',
         'GDH3'
     }
     for i, v in ipairs(sec_codes) do
