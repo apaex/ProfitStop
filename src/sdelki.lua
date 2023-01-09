@@ -7,8 +7,6 @@ function GetPositionParams(trdaccid, sec_code)
     return position.totalnet
 end
 
-
-
 -- Получает цену текущей позиции
 function GetTradersParams(trdaccid, sec_code)
     -- из позиции
@@ -32,8 +30,8 @@ function GetTradersParams(trdaccid, sec_code)
             if (qty < 0 and bit.test(trade.flags, 2)) or (qty > 0 and not bit.test(trade.flags, 2)) then
                 sum = sum + trade.price * trade.qty
                 sum_lots = sum_lots + trade.qty
-                broker_comission_sum = broker_comission_sum + trade.broker_comission
-                exchange_comission_sum = exchange_comission_sum + trade.exchange_comission
+                broker_comission_sum = broker_comission_sum + trade.broker_comission * 2
+                exchange_comission_sum = exchange_comission_sum + trade.exchange_comission * 2
                 -- Если найдены все сделки набора позиции
                 if sum_lots >= abs_totalnet then
                     -- корректировка
@@ -41,10 +39,10 @@ function GetTradersParams(trdaccid, sec_code)
 
                     sum = sum - trade.price * delta
                     sum_lots = sum_lots - delta
-                    broker_comission_sum = broker_comission_sum - trade.broker_comission / trade.qty * delta
-                    exchange_comission_sum = exchange_comission_sum - trade.exchange_comission / trade.qty * delta
+                    broker_comission_sum = broker_comission_sum - trade.broker_comission * 2 / trade.qty * delta
+                    exchange_comission_sum = exchange_comission_sum - trade.exchange_comission * 2 / trade.qty * delta
 
-                    return sum_lots, sum, broker_comission_sum, exchange_comission_sum
+                    return qty, sum, broker_comission_sum, exchange_comission_sum
                 end
 
             end
@@ -78,9 +76,9 @@ function CalcStop(trdaccid, sec_code)
     if not qty or qty == 0 then
         return
     end
-    broker_comission_sum = broker_comission_sum or BROKER_COMISSION * 2 * qty
+    broker_comission_sum = broker_comission_sum ~= 0 and broker_comission_sum or BROKER_COMISSION * 2 * math.abs(qty)
     message(sec_code ..
-        ": количество в позиции " .. nz(qty)..
+        ": количество в позиции " .. nz(qty) ..
         ", сумма открытия " .. nz(price_sum) ..
         ", комиссия брокера " .. nz(broker_comission_sum) ..
         ", комиссия биржи " .. nz(exchange_comission_sum))
