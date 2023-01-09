@@ -32,11 +32,9 @@ function Engine:Algo()
             if self.StopOrderNum ~= nil then
                 -- Если активна
                 if self:CheckStopOrderActive(self.StopOrderNum) then
+                    message("вот здесь позиция изменилась при активной стоп-заявке бота ".. totalnet)
                     -- Снимает
                     self:Kill_SO(self.StopOrderNum)
-                    message("вот здесь позиция изменилась при активной стоп-заявке бота "
-                        .. totalnet)
-                    self:Foo(self.StopOrderNum)
                     -- Запоминает, что нужно перевыставить стоп-заявку в те же цены
                     if MOVE_STOP_BY_POS == 0 and
                         ((self.StopPos > 0 and totalnet < 0) or (self.StopPos < 0 and totalnet > 0)) then
@@ -78,14 +76,20 @@ function Engine:Algo()
 
                 -- Нужно выставить в те же цены
                 if NeedSetToOldPricesLevels then
+                    message("в те же цены")
                     -- Получает цены из снятой стоп-заявки
                     local profit_price, stop_price = self:GetStopOrderPrices(self.StopOrderNum)
 
-                    if profit_size ~= 0 and profit_price ~= 0 then
-                        profit_size = math.abs(math.floor(math_round((profit_price - pos_price) / self.PriceStep)))
-                    end
-                    if stop_size ~= 0 and stop_price ~= 0 then
-                        stop_size = math.abs(math.floor(math_round((pos_price - stop_price) / self.PriceStep)))
+                    if totalnet > 0 then
+                        profit_size = profit_size == 0 and 0 or
+                            math.floor(math_round((profit_price - pos_price) / self.PriceStep))
+                        stop_size = stop_size == 0 and 0 or
+                            math.floor(math_round((pos_price - stop_price) / self.PriceStep))
+                    else
+                        profit_size = profit_size == 0 and 0 or
+                            math.floor(math_round((pos_price - profit_price) / self.PriceStep))
+                        stop_size = stop_size == 0 and 0 or
+                            math.floor(math_round((stop_price - pos_price) / self.PriceStep))
                     end
                 end
 
@@ -150,7 +154,7 @@ function Engine:Foo(stop_order_num)
         return
     end
 
-    message("выброшена заявка " .. order.order_num .. " ext_order_status " .. order.ext_order_status)
+    message("стопом выброшена заявка " .. order.order_num .. " ext_order_status " .. order.ext_order_status)
 end
 
 -- Получает цену текущей позиции
