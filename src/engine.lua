@@ -32,7 +32,6 @@ function Engine:Algo()
             if self.StopOrderNum ~= nil then
                 -- Если активна
                 if self:CheckStopOrderActive(self.StopOrderNum) then
-                    message("вот здесь позиция изменилась при активной стоп-заявке бота ".. totalnet)
                     -- Снимает
                     self:Kill_SO(self.StopOrderNum)
                     -- Запоминает, что нужно перевыставить стоп-заявку в те же цены
@@ -41,9 +40,11 @@ function Engine:Algo()
                         NeedSetToOldPricesLevels = true
                     end
                 else
-                    message("вот здесь позиция изменилась при НЕ активной стоп-заявке бота "
-                        .. totalnet)
-                    self:Foo(self.StopOrderNum)
+                    -- проверим, не исполняется ли заявка от стопа
+                    if self:CheckActiveOrderForStopOrder(self.StopOrderNum) then
+                        message("Заявка ещё исполняется, подождем")
+                        return
+                    end
                 end
                 -- Нет стоп заявки бота
             else
@@ -139,22 +140,24 @@ function Engine:Algo()
     end
 end
 
--- Найдем заявку, созданную исполненной стоп-заявкой
-function Engine:Foo(stop_order_num)
+-- Проверим активность заявки, созданной исполнившейся стоп-заявкой
+function Engine:CheckActiveOrderForStopOrder(stop_order_num)
     -- Получим нашу стоп-заявку
     local stop_order = Last('stop_orders', function(t) return t.order_num == stop_order_num end)
-    if not stop_order or not stop_order.linkedorder then
+    if not stop_order then
         return
     end
+    if stop_order.linkedorder == 0 then
+        return false
+    end
 
-    message(' filled_qty ' .. stop_order.filled_qty .. ' balance ' .. stop_order.balance)
-
+    -- Получим заявку, которую вытолкнула стоп-заявка при срабатывании
     local order = Last('orders', function(t) return t.order_num == stop_order.linkedorder end)
     if not order then
-        return
+        return false
     end
 
-    message("стопом выброшена заявка " .. order.order_num .. " ext_order_status " .. order.ext_order_status)
+    return bit.test(order.flags, 0)
 end
 
 -- Получает цену текущей позиции
