@@ -39,7 +39,7 @@ function printTable(name)
 end
 
 function nz(v, nv)
-	return v ~= nil and v or nv
+	return v ~= nil and v or nv or 'nil'
 end
 
 -- Округляет число до указанной точности
