@@ -35,7 +35,7 @@ function main()
     while IsRun do
         sleep(1000 * 1)
         if Changed then
-            SaveTableToCSV(filename2, Trades)
+            SaveTableToCSV(filename2, Trades, Fields)
             Changed = false
         end
     end
