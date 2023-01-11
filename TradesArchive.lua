@@ -27,7 +27,7 @@ Trades = {}
 
 function main()
     local filename = getScriptPath() .. "\\trades_db.csv"
-    Trades = makeStructure(LoadTableFromCSV(filename), "trade_num", Fields)
+    Trades = makeStructure(LoadTableFromCSV(filename), "trade_num", Fields) or {}
     GetTrades()
 
     Changed = true
