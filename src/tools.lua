@@ -1,41 +1,62 @@
-function setPrefix(prefix)
-	PrintDbgStr_ = PrintDbgStr
-	PrintDbgStr = function(v)
-		if v == nil then
-			message("PrintDbgStr(nil)", 2)
-			PrintDbgStr_(prefix .. " " .. "PrintDbgStr(nil)")
-		else
-			PrintDbgStr_(prefix .. " " .. v)
+function makeKey(t, key)
+	if t == nil then
+		return nil
+	end
+
+	res = {}
+	for i, v in ipairs(t) do
+		if v[key] ~= nil then
+			res[v[key]] = v
 		end
 	end
-	message_ = message
-	message = function(v, l)
-		message_(v, l)
-		PrintDbgStr(v)
-	end
+	return res
 end
 
-function DebugWrite(v)
-	if type(v) == "table" then
-		for key, value in pairs(v) do
-			PrintDbgStr(key .. " = (" .. type(value) .. ") " .. value)
-		end
-	else
-		PrintDbgStr(v)
+-- получаем все ключи таблицы
+function keys(t)
+	res = {}
+	for key, v in pairs(t) do
+		res[#res + 1] = key
 	end
+	return res
 end
 
-function printTable(name)
-	n = getNumberOf(name)
-	order = {}
-
-	tablePrintDbgStr("TABLE " .. name .. "[" .. tostring(n) .. "]")
-
-	for i = 0, n - 1 do
-		order = getItem(name, i)
-		tablePrintDbgStr(tostring(i) .. ":")
-		tablePrintDbgStr(order)
+-- получаем все значения таблицы
+function values(t)
+	res = {}
+	for key, v in pairs(t) do
+		res[#res + 1] = v
 	end
+	return res
+end
+
+function makePairs(keys, values)
+	local t = {}
+	for i = 1, #keys do
+		t[keys[i]] = values[i]
+	end
+	return t
+end
+
+function join(t, c)
+	local s = ""
+	for key, v in pairs(t) do
+		s = s .. v .. c
+	end
+	return #s > 0 and string.sub(s, 1, #s - 1) or "";
+end
+
+function split(s, c)
+	local result = {}
+
+	local index = 1
+	for s in string.gmatch(s, "[^" .. c .. "]*") do
+		result[index] = s
+
+		index = index + 1
+	end
+
+	return result
 end
 
 function nz(v, nv)
