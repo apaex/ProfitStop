@@ -7,13 +7,30 @@ setPrefix("PS")
 IsRun = true
 Changed = false;
 
+Fields =
+{
+    trade_num = "number",
+    datetime = "number", -- С…СЂР°РЅРёРј РІ POSIX
+    order_num = "number",
+    account = "string",
+    sec_code = "string",
+    class_code = "string",
+    flags = "number",
+    price = "number",
+    qty = "number",
+    value = "number",
+    exchange_comission = "number"
+}
+
 Trades = {}
 
 
 function main()
-    local filename = getScriptPath() .. "\\trades.csv"
-    local filename2 = getScriptPath() .. "\\trades2.csv"
-    Trades = makeKey(LoadTableFromCSV(filename), "trade_num")
+    local filename = getScriptPath() .. "\\trades_db.csv"
+    local filename2 = getScriptPath() .. "\\trades_db2.csv"
+    Trades = makeStructure(LoadTableFromCSV(filename), "trade_num", Fields)
+    -- GetTrades()
+
     Changed = true
     while IsRun do
         sleep(1000 * 1)
@@ -29,24 +46,18 @@ function OnStop()
     IsRun = false
 end
 
-function OnTrade(t)
-    if class_code ~= CLASS_CODE then
-        return
+function AddTrade(t)
+    if t.class_code == CLASS_CODE then
+        Trades[t.trade_num] = copyFields(t, Fields)
+        Trades[t.trade_num].datetime = os.time(Trades[t.trade_num].datetime)
+        Changed = true;
     end
-    Trades[t.trade_num] =
-    {
-        trade_num = t.trade_num,
-        datetime = t.datetime,
-        order_num = t.order_num,
-        account = t.account,
-        sec_code = t.sec_code,
-        class_code = t.class_code,
-        flags = t.flags,
-        price = t.price,
-        qty = t.qty,
-        value = t.value,
-        exchange_comission = t.exchange_comission
-    }
-    Changed = true;
+end
 
+function GetTrades()
+    ForEach("trades", function(t) AddTrade(t) end)
+end
+
+function OnTrade(t)
+    AddTrade(t)
 end

@@ -41,7 +41,7 @@ function SaveToCSV(name)
     local file = io.open(getScriptPath() .. "\\" .. name .. ".csv", "w")
 
     for key, v in pairs(row) do
-        file:write(key .. ";")
+        file:write(key .. '(' .. type(v) .. ')' .. ";")
     end
     file:write("\n")
 

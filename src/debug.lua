@@ -18,7 +18,11 @@ end
 function DebugWrite(v)
     if type(v) == "table" then
         for key, value in pairs(v) do
-            PrintDbgStr(key .. " = (" .. type(value) .. ") " .. value)
+            if type(value) == "table" then
+                PrintDbgStr(key .. " = (" .. type(value) .. ") " .. "[TABLE]")
+            else
+                PrintDbgStr(key .. " = (" .. type(value) .. ") " .. value)
+            end
         end
     else
         PrintDbgStr("(" .. type(v) .. ")" .. v)

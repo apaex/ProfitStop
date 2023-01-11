@@ -1,10 +1,35 @@
-function makeKey(t, key)
+function structureData(t, fields)
+	local res = {}
+	for key, v in pairs(t) do
+		if fields[key] == 'number' then
+			res[key] = tonumber(v)
+		else
+			res[key] = v
+		end
+	end
+	return res
+end
+
+function destructureData(t, fields)
+	local res = {}
+	for key, v in pairs(t) do
+		if fields[key] == 'number' then
+			res[key] = tostring(v)
+		else
+			res[key] = v
+		end
+	end
+	return res
+end
+
+function makeStructure(t, key, fields)
 	if t == nil then
 		return nil
 	end
 
-	res = {}
+	local res = {}
 	for i, v in ipairs(t) do
+		v = structureData(v, fields)
 		if v[key] ~= nil then
 			res[v[key]] = v
 		end
@@ -12,9 +37,17 @@ function makeKey(t, key)
 	return res
 end
 
+function copyFields(t, fields)
+	local res = {}
+	for k, v in pairs(fields) do
+		res[k] = t[k]
+	end
+	return res
+end
+
 -- получаем все ключи таблицы
 function keys(t)
-	res = {}
+	local res = {}
 	for key, v in pairs(t) do
 		res[#res + 1] = key
 	end
@@ -23,7 +56,7 @@ end
 
 -- получаем все значения таблицы
 function values(t)
-	res = {}
+	local res = {}
 	for key, v in pairs(t) do
 		res[#res + 1] = v
 	end
@@ -41,7 +74,7 @@ end
 function join(t, c)
 	local s = ""
 	for key, v in pairs(t) do
-		s = s .. v .. c
+		s = s .. tostring(v) .. c
 	end
 	return #s > 0 and string.sub(s, 1, #s - 1) or "";
 end

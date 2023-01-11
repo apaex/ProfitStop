@@ -45,7 +45,7 @@ function LoadTableFromCSV(filename)
             row = split(tostring(line), ";")            
             row = makePairs(headers, row)
 
-            table[#row + 1] = row
+            table[#table + 1] = row
         end
 
         count = count + 1
