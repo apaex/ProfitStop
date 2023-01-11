@@ -27,15 +27,14 @@ Trades = {}
 
 function main()
     local filename = getScriptPath() .. "\\trades_db.csv"
-    local filename2 = getScriptPath() .. "\\trades_db2.csv"
     Trades = makeStructure(LoadTableFromCSV(filename), "trade_num", Fields)
-    -- GetTrades()
+    GetTrades()
 
     Changed = true
     while IsRun do
         sleep(1000 * 1)
         if Changed then
-            SaveTableToCSV(filename2, Trades, Fields)
+            SaveTableToCSV(filename, Trades, Fields)
             Changed = false
         end
     end
