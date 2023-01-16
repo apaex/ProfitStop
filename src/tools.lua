@@ -39,8 +39,8 @@ end
 
 function copyFields(t, fields)
 	local res = {}
-	for k, v in pairs(fields) do
-		res[k] = t[k]
+	for i, v in ipairs(fields) do
+		res[v] = t[v]
 	end
 	return res
 end
@@ -90,6 +90,14 @@ function split(s, c)
 	end
 
 	return result
+end
+
+function foreach(t, func)
+	local res = {}
+	for k, v in pairs(t) do
+		res[k] = func(v)
+	end
+	return res
 end
 
 function nz(v, nv)

@@ -7,8 +7,8 @@ SqlTypeMap =
 
 function CreateTable(conn, table, fields, primary)
     local res = {}
-    for key, v in pairs(fields) do
-        res[#res + 1] = key .. ' ' .. SqlTypeMap[v]
+    for i, v in ipairs(fields) do
+        res[#res + 1] = v.name .. ' ' .. SqlTypeMap[v.type]
     end
 
     local sql = 'CREATE TABLE IF NOT EXISTS ' .. table .. ' (' .. join(res, ',') .. ', PRIMARY KEY(' .. primary ..
@@ -30,7 +30,7 @@ function CreateIndex(conn, table, key)
 end
 
 function Insert(conn, table, t)
-    local t1 = destructureDataDB(t)
+    local t1 = prepareData(t)
     local sql = 'INSERT INTO ' .. table .. ' (' .. join(keys(t1), ',') .. ') VALUES (' .. join(values(t1), ',') .. ')'
     message(sql)
     local status, errorString = conn:execute(sql)
@@ -40,7 +40,7 @@ function Insert(conn, table, t)
     return status
 end
 
-function destructureDataDB(t)
+function prepareData(t)
     local res = {}
     for key, v in pairs(t) do
         if type(v) == 'number' then

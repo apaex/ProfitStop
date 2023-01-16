@@ -10,17 +10,17 @@ Changed = false;
 
 Fields =
 {
-    trade_num = "number",
-    datetime = "table", -- храним в POSIX
-    order_num = "number",
-    account = "string",
-    sec_code = "string",
-    class_code = "string",
-    flags = "number",
-    price = "number",
-    qty = "number",
-    value = "number",
-    exchange_comission = "number"
+    { name = 'trade_num', type = "number" },
+    { name = 'datetime', type = "table" },
+    { name = 'order_num', type = "number" },
+    { name = 'account', type = "string" },
+    { name = 'sec_code', type = "string" },
+    { name = 'class_code', type = "string" },
+    { name = 'flags', type = "number" },
+    { name = 'price', type = "number" },
+    { name = 'qty', type = "number" },
+    { name = 'value', type = "number" },
+    { name = 'exchange_comission', type = "number" }
 }
 
 Trades = {}
@@ -56,9 +56,11 @@ function OnStop()
 
 end
 
+
+
 function AddTrade(t)
     if t.class_code == CLASS_CODE then
-        Trades[t.trade_num] = copyFields(t, Fields)
+        Trades[t.trade_num] = copyFields(t, foreach(Fields, function (t) return t.name end))
         -- Trades[t.trade_num].datetime = os.time(Trades[t.trade_num].datetime)
         Changed = true;
 
