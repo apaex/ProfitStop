@@ -26,7 +26,7 @@ function Insert(conn, table, t)
     local t1 = foreach(t, function(v) return frame(v, '\'') end)
 
     local sql = 'INSERT OR REPLACE INTO ' .. table .. ' (' .. join(keys(t1), ',') .. ') VALUES (' .. join(values(t1), ',') .. ')'
-    message(sql)
+ 
     local status, errorString = conn:execute(sql)
     if not status then
         message(errorString)

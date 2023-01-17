@@ -14,10 +14,11 @@ Fields =
     { name = 'account', type = "TEXT" },
     { name = 'class_code', type = "TEXT" },
     { name = 'sec_code', type = "TEXT" },
-    { name = 'price', type = "INTEGER" },
+    { name = 'price', type = "REAL" },
     { name = 'qty', type = "INTEGER" },
-    { name = 'value', type = "INTEGER" },
-    { name = 'exchange_comission', type = "INTEGER" },
+    { name = 'value', type = "REAL" },
+    { name = 'exchange_comission', type = "REAL" },
+    { name = 'broker_comission', type = "REAL" },
     { name = 'order_num', type = "INTEGER" }
 }
 
@@ -30,6 +31,9 @@ function main()
     end
 
     GetTrades()
+
+    while IsRun do
+    end
 
     conn:close()
     env:close()
@@ -46,12 +50,16 @@ function AddTrade(trade)
         if (bit.test(trade.flags, 2)) then
             t1.qty = -t1.qty
         end
+        if trade.broker_comission == 0 then
+            t1.broker_comission = BROKER_COMISSION
+        end
+
         Insert(conn, 'trades', t1)
     end
 end
 
 function GetTrades()
-    ForEach("trades", function(t) AddTrade(t) end)
+    ForEach("trades", AddTrade)
 end
 
 function OnTrade(t)
