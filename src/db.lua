@@ -36,16 +36,18 @@ function Insert(conn, table, t)
 end
 
 function Select(conn, table, fields)
-
     local fields_names = foreach(fields, function(v) return v.name end)
 
-    local cursor, errorString = conn:execute('SELECT ' .. join(fields_names) .. ' FROM ' .. table)
+    local sql = 'SELECT ' .. join(fields_names) .. ' FROM ' .. table
+
+    local cursor, errorString = conn:execute(sql)
     if not cursor then
         message(errorString, 2)
         return nil
     end
 
     local row = cursor:fetch({})
+
     local res = {}
 
     while row do
