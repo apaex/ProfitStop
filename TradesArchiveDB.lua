@@ -6,7 +6,6 @@ dofile(getScriptPath() .. "\\src\\config.lua")
 dofile(getScriptPath() .. "\\src\\debug.lua")
 setPrefix("PS")
 IsRun = true
-Changed = false;
 
 Fields =
 {
@@ -22,9 +21,6 @@ Fields =
     { name = 'order_num', type = "INTEGER" }
 }
 
-Trades = {}
-
-
 function main()
     env  = sqlite3.sqlite3()
     conn = env:connect(getScriptPath() .. "\\trades.sqlite")
@@ -33,18 +29,7 @@ function main()
         IsRun = false
     end
 
-
     GetTrades()
-
-
-    Changed = true
-    while IsRun do
-        sleep(1000 * 1)
-        if Changed then
-            -- SaveTableToCSV(filename, Trades, Fields)
-            Changed = false
-        end
-    end
 
     conn:close()
     env:close()
@@ -52,19 +37,16 @@ end
 
 function OnStop()
     IsRun = false
-
 end
 
 function AddTrade(trade)
     if trade.class_code == CLASS_CODE then
-        Trades[trade.trade_num] = copyFields(trade, foreach(Fields, function(t) return t.name end))
-        Trades[trade.trade_num].datetime = os.time(Trades[trade.trade_num].datetime)
+        local t1 = copyFields(trade, foreach(Fields, function(t) return t.name end))
+        t1.datetime = os.time(t1.datetime)
         if (bit.test(trade.flags, 2)) then
-            Trades[trade.trade_num].qty = -Trades[trade.trade_num].qty
+            t1.qty = -t1.qty
         end
-        Insert(conn, 'trades', Trades[trade.trade_num])
-
-        Changed = true;
+        Insert(conn, 'trades', t1)
     end
 end
 
@@ -72,10 +54,7 @@ function GetTrades()
     ForEach("trades", function(t) AddTrade(t) end)
 end
 
-count = 1
-
 function OnTrade(t)
     AddTrade(t)
-    message(tostring(count))
-    count = count + 1
+    message('OnTrade')
 end
