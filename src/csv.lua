@@ -8,7 +8,7 @@ function SaveTableToCSV(filename, table, fields)
 
     local count = 0
     local line
-    local headers = keys(fields)
+    local headers = fields and keys(fields)
 
     for key, row in pairs(table) do
         if count == 0 then

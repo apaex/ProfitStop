@@ -108,3 +108,19 @@ function CountOf(name, filter)
     end
     return #search
 end
+
+
+function PrintTable(name)
+    n = getNumberOf(name)
+    order = {}
+
+    tablePrintDbgStr("TABLE " .. name .. "[" .. tostring(n) .. "]")
+
+    for i = 0, n - 1 do
+        order = getItem(name, i)
+        tablePrintDbgStr(tostring(i) .. ":")
+        tablePrintDbgStr(order)
+    end
+end
+
+

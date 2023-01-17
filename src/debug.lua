@@ -21,23 +21,10 @@ function DebugWrite(v)
             if type(value) == "table" then
                 PrintDbgStr(key .. " = (" .. type(value) .. ") " .. "[TABLE]")
             else
-                PrintDbgStr(key .. " = (" .. type(value) .. ") " .. value)
+                PrintDbgStr(key .. " = (" .. type(value) .. ") " .. nz(value))
             end
         end
     else
-        PrintDbgStr("(" .. type(v) .. ")" .. v)
-    end
-end
-
-function printTable(name)
-    n = getNumberOf(name)
-    order = {}
-
-    tablePrintDbgStr("TABLE " .. name .. "[" .. tostring(n) .. "]")
-
-    for i = 0, n - 1 do
-        order = getItem(name, i)
-        tablePrintDbgStr(tostring(i) .. ":")
-        tablePrintDbgStr(order)
+        PrintDbgStr("(" .. type(v) .. ")" .. nz(v))
     end
 end
