@@ -54,8 +54,6 @@ function SaveToCSV(name)
             else
                 file:write("[TABLE];")
             end
-
-
         end
         file:write("\n")
     end

@@ -23,7 +23,7 @@ function CreateIndex(conn, table, key)
 end
 
 function Insert(conn, table, t)
-    local t1 = foreach(t, function(v) return frame(v, '\'') end)
+    local t1 = foreach(t, quote)
 
     local sql = 'INSERT OR REPLACE INTO ' ..
         table .. ' (' .. join(keys(t1), ',') .. ') VALUES (' .. join(values(t1), ',') .. ')'

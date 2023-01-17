@@ -67,7 +67,8 @@ function nz(v, nv)
 	return v ~= nil and v or nv or 'nil'
 end
 
-function frame(s, c)
+function quote(s, c)
+	c = c or '\''
     return c .. s .. c
 end
 

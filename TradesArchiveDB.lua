@@ -59,7 +59,6 @@ function AddTrade(trade)
             t1.qty = -t1.qty
         end
 
-
         Insert(conn, 'trades', t1)
     end
 end
