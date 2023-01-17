@@ -36,6 +36,8 @@ end
 
 function join(t, c)
 	local s = ""
+	c = c or ','
+	
 	for key, v in pairs(t) do
 		s = s .. tostring(v) .. c
 	end
@@ -44,6 +46,7 @@ end
 
 function split(s, c)
 	local result = {}
+	c = c or ','
 
 	local index = 1
 	for s in string.gmatch(s, "[^" .. c .. "]*") do
@@ -58,7 +61,7 @@ end
 function foreach(t, func)
 	local res = {}
 	for k, v in pairs(t) do
-		res[k] = func(v)
+		res[k] = func(v, k)
 	end
 	return res
 end
