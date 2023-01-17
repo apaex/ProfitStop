@@ -2,7 +2,9 @@
 Ограничение уровня дневного убытка -3% от счета
 
 ## Зависимости
-https://disk.yandex.ru/d/5JIjGDU1lKtF4w
+1. luasql 
+* Сборка для Windows x64 и LUA 5.3.5 https://disk.yandex.ru/d/5JIjGDU1lKtF4w
+* Исходники, если кто-то хочет собрать самостоятельно https://lunarmodules.github.io/luasql/
 
 ## Принцип работы
 
