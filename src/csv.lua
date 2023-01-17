@@ -1,4 +1,4 @@
-function SaveTableToCSV(filename, table, fields)
+function SaveTableToCSV(filename, t, headers)
 
     local f, errorString = io.open(filename, "w")
     if f == nil then
@@ -8,18 +8,29 @@ function SaveTableToCSV(filename, table, fields)
 
     local count = 0
     local line
-    local headers = fields and keys(fields)
 
-    for key, row in pairs(table) do
+    for key, row in pairs(t) do
         if count == 0 then
             headers = headers or keys(row) -- если структура не задана, то возьмем из первой строки
             line = join(headers, ';')
             f:write(line .. "\n")
         end
 
-        tmp_data = {}
+        local tmp_data = {}
         for i, v in ipairs(headers) do
-            tmp_data[i] = row[v]
+            local data = row[v]
+            if data == nil then
+                tmp_data[i] = ""
+            elseif v == 'datetime' then
+                tmp_data[i] = os.date("%d.%m.%Y %X", data)
+            elseif type(data) == "number" then
+                tmp_data[i] = string.gsub(tostring(data), "[.]", ",")
+                
+            elseif type(data) == "string" then
+                tmp_data[i] = data
+            else
+                tmp_data[i] = tostring(data)
+            end
         end
 
         line = join(tmp_data, ';')
@@ -63,42 +74,41 @@ function LoadTableFromCSV(filename)
 
 end
 
-
 function structureData(t, fields)
-	local res = {}
-	for key, v in pairs(t) do
-		if fields[key] == 'number' then
-			res[key] = tonumber(v)
-		else
-			res[key] = v
-		end
-	end
-	return res
+    local res = {}
+    for key, v in pairs(t) do
+        if fields[key] == 'number' then
+            res[key] = tonumber(v)
+        else
+            res[key] = v
+        end
+    end
+    return res
 end
 
 function destructureData(t, fields)
-	local res = {}
-	for key, v in pairs(t) do
-		if fields[key] == 'number' then
-			res[key] = tostring(v)
-		else
-			res[key] = v
-		end
-	end
-	return res
+    local res = {}
+    for key, v in pairs(t) do
+        if fields[key] == 'number' then
+            res[key] = tostring(v)
+        else
+            res[key] = v
+        end
+    end
+    return res
 end
 
 function makeStructure(t, key, fields)
-	if t == nil then
-		return nil
-	end
+    if t == nil then
+        return nil
+    end
 
-	local res = {}
-	for i, v in ipairs(t) do
-		v = structureData(v, fields)
-		if v[key] ~= nil then
-			res[v[key]] = v
-		end
-	end
-	return res
+    local res = {}
+    for i, v in ipairs(t) do
+        v = structureData(v, fields)
+        if v[key] ~= nil then
+            res[v[key]] = v
+        end
+    end
+    return res
 end

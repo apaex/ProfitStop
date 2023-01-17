@@ -1,10 +1,7 @@
 function CreateTable(conn, table, fields, primary)
-    local res = {}
-    for i, v in ipairs(fields) do
-        res[#res + 1] = v.name .. ' ' .. v.type
-    end
+    local _fields = foreach(fields, function(v) return v.name .. ' ' .. v.type end)
 
-    local sql = 'CREATE TABLE IF NOT EXISTS ' .. table .. ' (' .. join(res, ',') .. ', PRIMARY KEY(' .. primary ..
+    local sql = 'CREATE TABLE IF NOT EXISTS ' .. table .. ' (' .. join(_fields, ',') .. ', PRIMARY KEY(' .. primary ..
         ' ASC))'
     local status, errorString = conn:execute(sql)
     if not status then
@@ -36,9 +33,9 @@ function Insert(conn, table, t)
 end
 
 function Select(conn, table, fields)
-    local fields_names = foreach(fields, function(v) return v.name end)
+    local _fields = foreach(fields, function(v) return v.name end)
 
-    local sql = 'SELECT ' .. join(fields_names) .. ' FROM ' .. table
+    local sql = 'SELECT ' .. join(_fields) .. ' FROM ' .. table
 
     local cursor, errorString = conn:execute(sql)
     if not cursor then
@@ -46,12 +43,11 @@ function Select(conn, table, fields)
         return nil
     end
 
-    local row = cursor:fetch({})
-
     local res = {}
 
+    local row = cursor:fetch({})
     while row do
-        res[#res + 1] = makePairs(fields_names, row)
+        res[#res + 1] = makePairs(_fields, row)
         row = cursor:fetch({})
     end
 

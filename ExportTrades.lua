@@ -18,7 +18,7 @@ function main()
 
     if conn then
         Trades = Select(conn, "trades", Tables.trades)
-        SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", Trades, Tables.trades)
+        SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", Trades, foreach(Tables.trades, function(t) return t.name end))
 
         conn:close()
     else
