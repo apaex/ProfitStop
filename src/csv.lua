@@ -62,3 +62,43 @@ function LoadTableFromCSV(filename)
     return table
 
 end
+
+
+function structureData(t, fields)
+	local res = {}
+	for key, v in pairs(t) do
+		if fields[key] == 'number' then
+			res[key] = tonumber(v)
+		else
+			res[key] = v
+		end
+	end
+	return res
+end
+
+function destructureData(t, fields)
+	local res = {}
+	for key, v in pairs(t) do
+		if fields[key] == 'number' then
+			res[key] = tostring(v)
+		else
+			res[key] = v
+		end
+	end
+	return res
+end
+
+function makeStructure(t, key, fields)
+	if t == nil then
+		return nil
+	end
+
+	local res = {}
+	for i, v in ipairs(t) do
+		v = structureData(v, fields)
+		if v[key] ~= nil then
+			res[v[key]] = v
+		end
+	end
+	return res
+end

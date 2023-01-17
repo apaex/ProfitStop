@@ -10,17 +10,16 @@ Changed = false;
 
 Fields =
 {
-    { name = 'trade_num', type = "number" },
-    { name = 'datetime', type = "table" },
-    { name = 'order_num', type = "number" },
-    { name = 'account', type = "string" },
-    { name = 'sec_code', type = "string" },
-    { name = 'class_code', type = "string" },
-    { name = 'flags', type = "number" },
-    { name = 'price', type = "number" },
-    { name = 'qty', type = "number" },
-    { name = 'value', type = "number" },
-    { name = 'exchange_comission', type = "number" }
+    { name = 'trade_num', type = "INTEGER" },
+    { name = 'datetime', type = "DATATIME" },
+    { name = 'account', type = "TEXT" },
+    { name = 'class_code', type = "TEXT" },
+    { name = 'sec_code', type = "TEXT" },
+    { name = 'price', type = "INTEGER" },
+    { name = 'qty', type = "INTEGER" },
+    { name = 'value', type = "INTEGER" },
+    { name = 'exchange_comission', type = "INTEGER" },
+    { name = 'order_num', type = "INTEGER" }
 }
 
 Trades = {}
@@ -56,15 +55,16 @@ function OnStop()
 
 end
 
+function AddTrade(trade)
+    if trade.class_code == CLASS_CODE then
+        Trades[trade.trade_num] = copyFields(trade, foreach(Fields, function(t) return t.name end))
+        Trades[trade.trade_num].datetime = os.time(Trades[trade.trade_num].datetime)
+        if (bit.test(trade.flags, 2)) then
+            Trades[trade.trade_num].qty = -Trades[trade.trade_num].qty
+        end
+        Insert(conn, 'trades', Trades[trade.trade_num])
 
-
-function AddTrade(t)
-    if t.class_code == CLASS_CODE then
-        Trades[t.trade_num] = copyFields(t, foreach(Fields, function (t) return t.name end))
-        -- Trades[t.trade_num].datetime = os.time(Trades[t.trade_num].datetime)
         Changed = true;
-
-        Insert(conn, 'trades', Trades[t.trade_num])
     end
 end
 
