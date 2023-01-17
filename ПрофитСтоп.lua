@@ -1,5 +1,5 @@
 dofile(getScriptPath() .. "\\src\\tools.lua")
-dofile(getScriptPath() .. "\\src\\qtools.lua")
+dofile(getScriptPath() .. "\\src\\quik.lua")
 dofile(getScriptPath() .. "\\src\\config.lua")
 dofile(getScriptPath() .. "\\src\\sdelki.lua")
 dofile(getScriptPath() .. "\\src\\engine.lua")
