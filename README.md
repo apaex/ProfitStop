@@ -3,9 +3,7 @@
 
 ## Зависимости
 Для работы некоторых скриптов необходимо установить дополнительные пакеты для LUA. Просто распакуйте содержимое архива в каталог QIUK
-1. luasql 
-* [Сборка для Windows x64 и LUA 5.3.5](https://disk.yandex.ru/d/5JIjGDU1lKtF4w)
-* [Исходники](https://github.com/lunarmodules/luasql), если кто-то хочет собрать самостоятельно
+1. **luasql** [Сборка для Windows x64 и LUA 5.3.5](https://disk.yandex.ru/d/5JIjGDU1lKtF4w) ([Исходники](https://github.com/lunarmodules/luasql), если кто-то хочет собрать самостоятельно)
 
 ## Принцип работы
 
