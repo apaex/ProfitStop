@@ -27,15 +27,20 @@ function main()
     conn = env:connect(getScriptPath() .. "\\trades.sqlite")
 
     if not conn or not CreateTable(conn, 'trades', Fields, 'trade_num') or not CreateIndex(conn, 'trades', 'order_num') then
+        message("Подключение к базе данных не удалось", 2)
         IsRun = false
     end
 
-    GetTrades()
+    if IsRun then
+        GetTrades()
+    end
 
     while IsRun do
     end
 
-    conn:close()
+    if conn then
+        conn:close()
+    end
     env:close()
 end
 

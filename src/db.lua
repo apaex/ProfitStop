@@ -8,7 +8,7 @@ function CreateTable(conn, table, fields, primary)
         ' ASC))'
     local status, errorString = conn:execute(sql)
     if not status then
-        message(errorString)
+        message(errorString, 2)
     end
     return status
 end
@@ -17,7 +17,7 @@ function CreateIndex(conn, table, key)
     local sql = 'CREATE INDEX IF NOT EXISTS ' .. key .. ' ON ' .. table .. ' (' .. key .. ')'
     local status, errorString = conn:execute(sql)
     if not status then
-        message(errorString)
+        message(errorString, 2)
     end
     return status
 end
@@ -29,7 +29,7 @@ function Insert(conn, table, t)
  
     local status, errorString = conn:execute(sql)
     if not status then
-        message(errorString)
+        message(errorString, 2)
     end
     return status
 end
