@@ -52,12 +52,13 @@ function AddTrade(trade)
     if trade.class_code == CLASS_CODE then
         local t1 = copyFields(trade, foreach(Fields, function(t) return t.name end))
         t1.datetime = os.time(t1.datetime)
+        if trade.broker_comission == 0 then
+            t1.broker_comission = BROKER_COMISSION * trade.qty
+        end
         if (bit.test(trade.flags, 2)) then
             t1.qty = -t1.qty
         end
-        if trade.broker_comission == 0 then
-            t1.broker_comission = BROKER_COMISSION
-        end
+
 
         Insert(conn, 'trades', t1)
     end
