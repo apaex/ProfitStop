@@ -8,17 +8,13 @@ dofile(getScriptPath() .. "\\src\\config.lua")
 dofile(getScriptPath() .. "\\src\\debug.lua")
 setPrefix("PS")
 
-Trades = {}
-
-
-
 function main()
     env  = sqlite3.sqlite3()
     conn = env:connect(getScriptPath() .. "\\trades.sqlite")
 
     if conn then
-        Trades = Select(conn, "trades", Tables.trades)
-        SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", Trades, foreach(Tables.trades, function(t) return t.name end))
+        local trades = Select(conn, "trades", Tables.trades)
+        SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", trades, foreach(Tables.trades, function(t) return t.name end))
 
         conn:close()
     else
