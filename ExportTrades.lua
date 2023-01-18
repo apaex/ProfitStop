@@ -1,22 +1,23 @@
 sqlite3 = require "luasql.sqlite3"
 dofile(getScriptPath() .. "\\src\\tools.lua")
 dofile(getScriptPath() .. "\\src\\quik.lua")
+dofile(getScriptPath() .. "\\src\\db_table.lua")
 dofile(getScriptPath() .. "\\src\\db.lua")
-dofile(getScriptPath() .. "\\src\\db_struct.lua")
 dofile(getScriptPath() .. "\\src\\csv.lua")
 dofile(getScriptPath() .. "\\src\\config.lua")
 dofile(getScriptPath() .. "\\src\\debug.lua")
 setPrefix("PS")
 
 function main()
-    env  = sqlite3.sqlite3()
-    conn = env:connect(getScriptPath() .. "\\trades.sqlite")
+    env          = sqlite3.sqlite3()
+    DBTable.conn = env:connect(DB_FILE)
 
-    if conn then
-        local trades = Select(conn, "trades", Tables.trades)
-        SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", trades, foreach(Tables.trades, function(t) return t.name end))
+    if DBTable.conn then
+        local trades = db.trades:Select()
+        SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", trades,
+            foreach(db.trades.fields, function(t) return t.name end))
 
-        conn:close()
+        DBTable.conn:close()
     else
         message("Подключение к базе данных не удалось", 2)
     end

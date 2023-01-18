@@ -12,7 +12,7 @@ function main()
 	while IsRun do
 		if isConnected() then
 			if not IsInit then
-				firmid, client_code = unpack(GetClientCode())
+				firmid, client_code = GetClientCode()
 				message("Контроль риска установлен: " .. client_code .. " " .. firmid)
 
 				DebugOut()
@@ -48,30 +48,30 @@ end
 
 function GetClientCode()
 	if FIRM_ID ~= nil and CLIENT_CODE ~= nil then
-		return { FIRM_ID, CLIENT_CODE }
+		return FIRM_ID, CLIENT_CODE
 	end
 
 	local search = SearchItems("money_limits", 0, getNumberOf("money_limits") - 1,
 		function(t) return t.currentbal ~= 0 and t.limit_kind == 0 end)
 	if search == nil or #search == 0 then
-		return { nil, nil }
+		return nil, nil
 	end
 
 	local row = getItem("money_limits", search[1])
 
-	return { row.firmid, row.client_code }
+	return row.firmid, row.client_code
 end
 
 function GetClientBallance()
 	local t = getPortfolioInfo(firmid, client_code)
 	if t ~= nil then
-		return { t.in_assets, t.assets }
+		return t.in_assets, t.assets
 	end
-	return { 0, 0 }
+	return 0, 0
 end
 
 function GetClientRisk()
-	local in_assets, assets = unpack(GetClientBallance())
+	local in_assets, assets = GetClientBallance()
 	if in_assets == nil or in_assets == 0 then
 		return 0
 	end
