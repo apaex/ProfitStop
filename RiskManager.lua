@@ -114,7 +114,7 @@ function PrintAllPositions()
 end
 
 function DebugOut()
-	local in_assets, assets = unpack(GetClientBallance())
+	local in_assets, assets = GetClientBallance()
 	message("Входящие средства: " .. in_assets)
 	message("Текущие средства: " .. assets)
 

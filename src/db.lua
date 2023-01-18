@@ -29,8 +29,8 @@ function db.trades:GetGroupTraders()
     } -- порядок в запросе должен точно соответствовать
 
     local sql = [[SELECT order_num, MIN(datetime) AS datetime, account, class_code, sec_code, SUM(qty) AS qty,SUM(value) AS value,SUM(exchange_comission) AS exchange_comission , SUM(broker_comission) AS broker_comission FROM trades
-    GROUP BY order_num
-    ORDER BY datetime ASC]]
+                    GROUP BY order_num
+                    ORDER BY datetime ASC]]
 
     local cursor, errorString = self.conn:execute(sql)
     if not cursor then

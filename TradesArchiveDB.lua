@@ -54,5 +54,4 @@ end
 
 function OnTrade(t)
     AddTrade(t)
-    message('OnTrade')
 end
