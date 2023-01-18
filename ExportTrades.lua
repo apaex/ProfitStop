@@ -13,10 +13,13 @@ function main()
     DBTable.conn = env:connect(DB_FILE)
 
     if DBTable.conn then
-        local trades = db.trades:Select()
-        SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", trades,
-            foreach(db.trades.fields, function(t) return t.name end))
-
+        local trades, fields = db.trades:GetGroupTraders()
+        DebugWrite(fields)
+        if trades then
+            SaveTableToCSV(getScriptPath() .. "\\trades_db.csv", trades, fields)
+        else
+            message("Не удалось сформировать группировку сделок", 2)
+        end
         DBTable.conn:close()
     else
         message("Подключение к базе данных не удалось", 2)
