@@ -49,7 +49,9 @@ function AddTrade(trade)
 end
 
 function GetTrades()
-    ForEach("trades", AddTrade)
+    message("Save begin")
+    ForEach("trades", AddTrade) 
+    message("Save end")
 end
 
 function OnTrade(t)
