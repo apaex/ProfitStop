@@ -12,18 +12,18 @@ Trades = {}
 
 
 function main()
-    env  = sqlite3.sqlite3()
+    env          = sqlite3.sqlite3()
     DBTable.conn = env:connect(DB_FILE)
     if DBTable.conn then
         if db.trades:Create() then
             GetTrades()
-            while IsRun do 
+            while IsRun do
                 sleep(1000)
                 if #Trades > 0 then
-                    message("Сохранение в БД")
+                    message("Сохранение в БД " .. #Trades .. " сделок")
                     SaveTrades()
                     message("/Сохранение в БД")
-                end            
+                end
             end
         else
             message("Не удалось создать структуру БД", 2)
@@ -41,12 +41,11 @@ function OnStop()
 end
 
 function SaveTrades()
-    foreach(Trades, function (t)
+    foreach(Trades, function(t)
         db.trades:Insert(t)
         return nil
     end)
 end
-
 
 function AddTrade(trade)
     if trade.class_code == CLASS_CODE then
