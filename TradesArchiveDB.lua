@@ -18,10 +18,8 @@ function main()
         if db.trades:Create() then
             GetTrades()
             while IsRun do
-                sleep(1000)
-                message("Сохранение в БД " .. #Trades .. " сделок")
                 SaveTrades()
-                message("/Сохранение в БД")
+                sleep(1000 * 10)
             end
         else
             message("Не удалось создать структуру БД", 2)
@@ -39,10 +37,10 @@ function OnStop()
 end
 
 function SaveTrades()
-	for k, v in pairs(Trades) do
+    for k, v in pairs(Trades) do
         db.trades:Insert(v)
         Trades[k] = nil
-	end
+    end
 end
 
 function AddTrade(trade)
