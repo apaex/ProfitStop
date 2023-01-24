@@ -8,6 +8,7 @@ dofile(getScriptPath() .. "\\src\\debug.lua")
 setPrefix("PS")
 IsRun = true
 
+Trades = {}
 
 
 function main()
@@ -44,7 +45,8 @@ function AddTrade(trade)
             t1.qty = -t1.qty
         end
 
-        db.trades:Insert(t1)
+        Trades[trade.trade_num] = t1
+        -- db.trades:Insert(t1)
     end
 end
 
