@@ -9,6 +9,8 @@ setPrefix("PS")
 IsRun = true
 
 Trades = {}
+Changed = false
+RefreshAllTrades = true
 
 
 function main()
@@ -16,9 +18,16 @@ function main()
     DBTable.conn = env:connect(DB_FILE)
     if DBTable.conn then
         if db.trades:Create() then
-            GetTrades()
+
             while IsRun do
-                SaveTrades()
+                if RefreshAllTrades then
+                    GetTrades()
+                    RefreshAllTrades = false
+                end
+                if Changed then
+                    SaveTrades()
+                    Changed = false
+                end
                 sleep(1000 * 10)
             end
         else
@@ -55,6 +64,7 @@ function AddTrade(trade)
         end
 
         Trades[trade.trade_num] = t1
+        Changed = true
     end
 end
 
@@ -64,4 +74,8 @@ end
 
 function OnTrade(t)
     AddTrade(t)
+end
+
+function OnConnected()
+    RefreshAllTrades = true
 end
