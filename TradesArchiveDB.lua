@@ -28,7 +28,7 @@ function main()
                     SaveTrades()
                     Changed = false
                 end
-                sleep(1000 * 10)
+                sleep(1000 * 1)
             end
         else
             message("Не удалось создать структуру БД", 2)
@@ -47,6 +47,9 @@ end
 
 function SaveTrades()
     for k, v in pairs(Trades) do
+        if not IsRun then
+            break
+        end
         db.trades:Insert(v)
         Trades[k] = nil
     end
