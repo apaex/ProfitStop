@@ -19,11 +19,9 @@ function main()
             GetTrades()
             while IsRun do
                 sleep(1000)
-                if #Trades > 0 then
-                    message("Сохранение в БД " .. #Trades .. " сделок")
-                    SaveTrades()
-                    message("/Сохранение в БД")
-                end
+                message("Сохранение в БД " .. #Trades .. " сделок")
+                SaveTrades()
+                message("/Сохранение в БД")
             end
         else
             message("Не удалось создать структуру БД", 2)
@@ -41,10 +39,10 @@ function OnStop()
 end
 
 function SaveTrades()
-    foreach(Trades, function(t)
-        db.trades:Insert(t)
-        return nil
-    end)
+	for k, v in pairs(Trades) do
+        db.trades:Insert(v)
+        Trades[k] = nil
+	end
 end
 
 function AddTrade(trade)
