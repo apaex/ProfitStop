@@ -17,8 +17,14 @@ function main()
     if DBTable.conn then
         if db.trades:Create() then
             GetTrades()
-            while IsRun do end
-
+            while IsRun do 
+                sleep(1000)
+                if #Trades > 0 then
+                    message("Сохранение в БД")
+                    SaveTrades()
+                    message("/Сохранение в БД")
+                end            
+            end
         else
             message("Не удалось создать структуру БД", 2)
         end
@@ -34,6 +40,14 @@ function OnStop()
     IsRun = false
 end
 
+function SaveTrades()
+    foreach(Trades, function (t)
+        db.trades:Insert(t)
+        return nil
+    end)
+end
+
+
 function AddTrade(trade)
     if trade.class_code == CLASS_CODE then
         local t1 = copyFields(trade, foreach(db.trades.fields, function(t) return t.name end))
@@ -46,14 +60,11 @@ function AddTrade(trade)
         end
 
         Trades[trade.trade_num] = t1
-        -- db.trades:Insert(t1)
     end
 end
 
 function GetTrades()
-    message("Save begin")
-    ForEach("trades", AddTrade) 
-    message("Save end")
+    ForEach("trades", AddTrade)
 end
 
 function OnTrade(t)
