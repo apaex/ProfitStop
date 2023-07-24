@@ -25,10 +25,10 @@ setmetatable(db.trades, { __index = DBTable })
 
 function db.trades:GetGroupTraders()
     local fields = {
-        'order_num', 'datetime', 'account', 'class_code', 'sec_code', 'qty', 'value', 'exchange_comission', 'broker_comission'
+        'order_num', 'datetime', 'account', 'class_code', 'sec_code', 'price', 'qty', 'summ', 'exchange_comission', 'broker_comission'
     } -- порядок в запросе должен точно соответствовать
 
-    local sql = [[SELECT order_num, MIN(datetime) AS datetime, account, class_code, sec_code, SUM(qty) AS qty,SUM(value) AS value,SUM(exchange_comission) AS exchange_comission , SUM(broker_comission) AS broker_comission FROM trades
+    local sql = [[SELECT order_num, MIN(datetime) AS datetime, account, class_code, sec_code, price, SUM(qty) AS qty, ABS(SUM(price * qty)) AS summ, SUM(exchange_comission) AS exchange_comission , SUM(broker_comission) AS broker_comission FROM trades
                     GROUP BY order_num
                     ORDER BY datetime ASC]]
 
