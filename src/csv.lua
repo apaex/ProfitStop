@@ -25,7 +25,7 @@ function SaveTableToCSV(filename, t, headers)
                 tmp_data[i] = os.date("%d.%m.%Y %X", data)
             elseif type(data) == "number" then
                 tmp_data[i] = string.gsub(tostring(data), "[.]", ",")
-                
+
             elseif type(data) == "string" then
                 tmp_data[i] = data
             else
